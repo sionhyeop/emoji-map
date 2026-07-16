@@ -71,8 +71,8 @@ main{max-width:1200px;margin:0 auto;padding:16px}
 .group>h2 .gcount{font-size:12px;color:var(--sub);font-weight:600;background:var(--chip);border-radius:999px;padding:2px 9px}
 .sub h3{font-size:12.5px;font-weight:700;color:var(--sub);padding:10px 2px 6px;text-transform:capitalize}
 .egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:2px}
-.e{font-size:26px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:10px;position:relative;transition:background .1s;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
-.e:hover{background:var(--accent-soft);transform:scale(1.12)}
+.e{font-size:26px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:10px;position:relative;transition:transform .12s cubic-bezier(.34,1.56,.64,1);font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;will-change:transform}
+.e:hover{background:var(--accent-soft)}
 .e.has-skin::after{content:"";position:absolute;right:5px;bottom:5px;width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.65}
 .hidden{display:none!important}
 .no-result{text-align:center;color:var(--sub);padding:60px 0;font-size:15px}
@@ -107,6 +107,21 @@ main{max-width:1200px;margin:0 auto;padding:16px}
 .toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:9px 18px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:100}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* canvas map view */
+#mapview{display:none;position:relative;height:calc(100vh - 130px);min-height:420px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--panel);touch-action:none}
+body.mapmode #mapview{display:block}
+body.mapmode #map,body.mapmode .pinned{display:none}
+body.mapmode #mapview{height:calc(100vh - 210px)}
+#mapCanvas{width:100%;height:100%;display:block;cursor:grab}
+#mapCanvas.grabbing{cursor:grabbing}
+.zoomctl{position:absolute;right:14px;top:14px;display:flex;flex-direction:column;gap:6px;z-index:5}
+.zoomctl button{width:38px;height:38px;border-radius:11px;background:var(--panel);border:1px solid var(--line);font-size:17px;font-weight:700;box-shadow:var(--shadow)}
+.zoomctl button:hover{background:var(--accent-soft)}
+.maphint{position:absolute;left:14px;bottom:12px;font-size:12px;color:var(--sub);background:color-mix(in srgb,var(--panel) 80%,transparent);backdrop-filter:blur(6px);padding:5px 11px;border-radius:999px;pointer-events:none}
+.maptip{position:absolute;pointer-events:none;background:var(--text);color:var(--bg);font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:9px;transform:translate(-50%,-130%);white-space:nowrap;opacity:0;transition:opacity .1s;z-index:6}
+.maptip .tbig{font-size:16px;margin-right:4px}
+/* particles */
+.particle{position:fixed;pointer-events:none;z-index:200;font-size:22px;left:0;top:0;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 footer{max-width:1200px;margin:30px auto 0;padding:20px 16px 40px;color:var(--sub);font-size:12.5px;border-top:1px solid var(--line)}
 footer a{color:var(--accent)}
 @media (max-width:640px){
@@ -126,6 +141,7 @@ footer a{color:var(--accent)}
       <input id="q" type="search" placeholder="이모지 검색 — 한국어/영어 (예: 하트, party, 고양이)" autocomplete="off">
     </div>
     <div class="skin-picker" id="skins" title="스킨톤 선택"></div>
+    <button class="hbtn" id="viewBtn" title="지도 뷰 전환">🗺️ 지도뷰</button>
     <button class="hbtn" id="randomBtn" title="랜덤 이모지">🎲 랜덤</button>
     <button class="hbtn" id="themeBtn" title="테마 전환">🌙</button>
   </div>
@@ -144,6 +160,16 @@ footer a{color:var(--accent)}
       <span class="plabel">⭐ 즐겨찾기</span><div class="pemo"></div>
       <button class="pclear" data-clear="fav">지우기</button>
     </div>
+  </div>
+  <div id="mapview">
+    <canvas id="mapCanvas"></canvas>
+    <div class="zoomctl">
+      <button id="zoomIn">＋</button>
+      <button id="zoomOut">－</button>
+      <button id="zoomFit" title="전체 보기">⛶</button>
+    </div>
+    <div class="maphint">드래그로 이동 · 휠/버튼으로 줌 · 클릭하면 복사</div>
+    <div class="maptip" id="maptip"></div>
   </div>
   <div id="map"></div>
   <div class="no-result hidden" id="noResult">검색 결과가 없어요 😢 다른 키워드로 시도해 보세요</div>
@@ -225,7 +251,7 @@ const skinsEl = $('#skins');
 TONES.forEach((t,i)=>{
   const b = document.createElement('button');
   b.textContent = t; b.title = i===0?'기본':'스킨톤 '+i;
-  b.onclick = ()=>{ tone=i; store.set('tone',i); renderTonesState(); refreshAllGlyphs(); };
+  b.onclick = ()=>{ tone=i; store.set('tone',i); renderTonesState(); refreshAllGlyphs(); if(window.mapDraw) mapDraw(); };
   skinsEl.appendChild(b);
 });
 function renderTonesState(){ [...skinsEl.children].forEach((b,i)=>b.classList.toggle('on', i===tone)) }
@@ -238,7 +264,10 @@ DATA.forEach((g, gi) => {
   const [ico, kname] = CAT[g.name] || ['🔸', g.name];
   const nb = document.createElement('button');
   nb.className = 'cat-btn'; nb.innerHTML = ico + ' ' + kname;
-  nb.onclick = () => document.getElementById('g'+gi).scrollIntoView();
+  nb.onclick = () => {
+    if(document.body.classList.contains('mapmode') && window.mapFlyTo) mapFlyTo(g.name);
+    else document.getElementById('g'+gi).scrollIntoView();
+  };
   catnav.appendChild(nb);
 
   const sec = document.createElement('section');
@@ -275,8 +304,17 @@ mapEl.addEventListener('click', ev => {
   openPanel(e);
 });
 
+function copyText(t){
+  return navigator.clipboard.writeText(t).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+  });
+}
 function copyEmoji(ch, e){
-  navigator.clipboard.writeText(ch).then(()=>toast(ch + ' 복사됨!'));
+  copyText(ch).then(()=>toast(ch + ' 복사됨!'));
+  burst(ch);
   if(e){
     let r = store.get('recent', []).filter(c => c !== e.c);
     r.unshift(e.c); store.set('recent', r.slice(0,24)); renderPins();
@@ -350,7 +388,7 @@ function renderCombo(){
   $('#combo').classList.toggle('show', combo.length > 0);
   $('#comboStr').textContent = combo.join('');
 }
-$('#comboCopy').onclick = () => { navigator.clipboard.writeText(combo.join('')).then(()=>toast('조합 복사됨! ' + combo.join(''))); };
+$('#comboCopy').onclick = () => { copyText(combo.join('')).then(()=>toast('조합 복사됨! ' + combo.join(''))); };
 $('#comboClear').onclick = () => { combo = []; renderCombo(); };
 
 /* ---------- moods ---------- */
@@ -383,7 +421,10 @@ qEl.addEventListener('input', () => {
 });
 function filterBySet(set){ qEl.value = ''; applyFilter(e => set.has(e.c)); }
 function clearFilter(){ applyFilter(null); }
+let currentPred = null;
 function applyFilter(pred){
+  currentPred = pred;
+  if(window.mapDraw) mapDraw();
   let any = false;
   mapEl.querySelectorAll('.egrid').forEach(grid => {
     let vis = 0;
@@ -416,8 +457,277 @@ $('#randomBtn').onclick = () => {
 /* ---------- theme ---------- */
 let theme = store.get('theme', matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 function applyTheme(){ document.documentElement.dataset.theme = theme; $('#themeBtn').textContent = theme==='dark'?'☀️':'🌙'; }
-$('#themeBtn').onclick = () => { theme = theme==='dark'?'light':'dark'; store.set('theme', theme); applyTheme(); };
+$('#themeBtn').onclick = () => { theme = theme==='dark'?'light':'dark'; store.set('theme', theme); applyTheme(); if(window.mapDraw) mapDraw(); };
 applyTheme();
+
+/* ================= FUN: particle burst & emoji rain ================= */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let px = innerWidth/2, py = innerHeight/2;
+addEventListener('pointerdown', e => { px = e.clientX; py = e.clientY; }, true);
+function burst(ch){
+  if(REDUCED) return;
+  for(let i=0;i<9;i++){
+    const s = document.createElement('span');
+    s.className = 'particle'; s.textContent = ch;
+    document.body.appendChild(s);
+    const a = Math.random()*Math.PI*2, d = 50+Math.random()*80, sc = .5+Math.random();
+    s.animate([
+      {transform:`translate(${px}px,${py}px) scale(1)`, opacity:1},
+      {transform:`translate(${px+Math.cos(a)*d}px,${py+Math.sin(a)*d - 30}px) scale(${sc}) rotate(${(Math.random()-.5)*180}deg)`, opacity:0}
+    ], {duration:600+Math.random()*300, easing:'cubic-bezier(.1,.8,.3,1)'}).onfinish = () => s.remove();
+  }
+}
+document.querySelector('.logo').style.cursor = 'pointer';
+document.querySelector('.logo').onclick = () => {
+  if(REDUCED) return;
+  for(let i=0;i<36;i++){
+    const s = document.createElement('span');
+    s.className = 'particle';
+    s.textContent = ALL[Math.floor(Math.random()*ALL.length)].c;
+    s.style.fontSize = (18+Math.random()*22)+'px';
+    document.body.appendChild(s);
+    const x = Math.random()*innerWidth;
+    s.animate([
+      {transform:`translate(${x}px,-40px) rotate(0deg)`, opacity:1},
+      {transform:`translate(${x+(Math.random()-.5)*160}px,${innerHeight+40}px) rotate(${(Math.random()-.5)*540}deg)`, opacity:.9}
+    ], {duration:1600+Math.random()*1800, delay:Math.random()*500, easing:'cubic-bezier(.4,0,.8,.9)'}).onfinish = () => s.remove();
+  }
+};
+
+/* ================= FUN: dock-style hover magnify ================= */
+if(matchMedia('(hover:hover)').matches && !REDUCED){
+  let magGrid = null, magRaf = 0;
+  const resetMag = g => g && g.querySelectorAll('.e').forEach(b => { b.style.transform=''; b.style.zIndex=''; });
+  mapEl.addEventListener('mousemove', ev => {
+    const grid = ev.target.closest('.egrid');
+    if(magGrid && magGrid !== grid) resetMag(magGrid);
+    magGrid = grid;
+    if(!grid || magRaf) return;
+    magRaf = requestAnimationFrame(() => {
+      magRaf = 0;
+      grid.querySelectorAll('.e:not(.hidden)').forEach(b => {
+        const r = b.getBoundingClientRect();
+        const d = Math.hypot(ev.clientX-(r.left+r.width/2), ev.clientY-(r.top+r.height/2));
+        if(d < 100){
+          const s = 1 + (1-d/100)*.85;
+          b.style.transform = `scale(${s}) translateY(${-(1-d/100)*7}px)`;
+          b.style.zIndex = Math.round((1-d/100)*10)+1;
+        } else { b.style.transform=''; b.style.zIndex=''; }
+      });
+    });
+  });
+  mapEl.addEventListener('mouseleave', () => { resetMag(magGrid); magGrid = null; });
+}
+
+/* ================= CANVAS MAP VIEW ================= */
+const GCOLOR = {
+  'Smileys & Emotion':['#fef3c7','#f59e0b'], 'People & Body':['#ffe4e6','#f43f5e'],
+  'Animals & Nature':['#dcfce7','#22c55e'], 'Food & Drink':['#ffedd5','#f97316'],
+  'Travel & Places':['#dbeafe','#3b82f6'], 'Activities':['#fce7f3','#ec4899'],
+  'Objects':['#ede9fe','#8b5cf6'], 'Symbols':['#cffafe','#06b6d4'], 'Flags':['#f1f5f9','#64748b']
+};
+const GCOLOR_DARK = {
+  'Smileys & Emotion':['#2a2410','#fbbf24'], 'People & Body':['#2c1519','#fb7185'],
+  'Animals & Nature':['#0f2418','#4ade80'], 'Food & Drink':['#2a1a0e','#fb923c'],
+  'Travel & Places':['#101d33','#60a5fa'], 'Activities':['#2a1222','#f472b6'],
+  'Objects':['#1d1733','#a78bfa'], 'Symbols':['#0a2529','#22d3ee'], 'Flags':['#1a2028','#94a3b8']
+};
+const WORLD_W = 3600, WORLD_H = 2200;
+const territories = [], cells = [];
+(function layout(){
+  function split(items, x, y, w, h){
+    if(items.length === 1){ items[0].rect = {x,y,w,h}; return; }
+    const total = items.reduce((a,i)=>a+i.wt, 0);
+    let acc = 0, i = 0;
+    for(; i < items.length-1; i++){ acc += items[i].wt; if(acc >= total/2) break; }
+    i = Math.min(i, items.length-2);
+    const a = items.slice(0, i+1), b = items.slice(i+1);
+    const f = a.reduce((s,it)=>s+it.wt, 0) / total;
+    if(w >= h){ split(a,x,y,w*f,h); split(b,x+w*f,y,w*(1-f),h); }
+    else { split(a,x,y,w,h*f); split(b,x,y+h*f,w,h*(1-f)); }
+  }
+  const items = DATA.map(g => ({ g, wt: g.subs.reduce((a,s)=>a+s.emoji.length,0) }));
+  split(items, 0, 0, WORLD_W, WORLD_H);
+  items.forEach(({g, rect}) => {
+    const list = g.subs.flatMap(s => s.emoji);
+    const pad = 14, label = 46;
+    const ix = rect.x+pad, iy = rect.y+pad+label, iw = rect.w-pad*2, ih = rect.h-pad*2-label;
+    const n = list.length;
+    let cols = Math.max(1, Math.round(Math.sqrt(n*iw/ih)));
+    let rows = Math.ceil(n/cols);
+    while(cols > 1 && rows*Math.floor(iw/cols) > ih && Math.ceil(n/(cols+1)) <= ih/Math.floor(iw/(cols+1))) cols++;
+    rows = Math.ceil(n/cols);
+    const cell = Math.min(iw/cols, ih/rows);
+    const ox = ix + (iw - cell*cols)/2, oy = iy + (ih - cell*rows)/2;
+    const t = { g: g.name, rect, cell, cols, ox, oy, list };
+    territories.push(t);
+    list.forEach((e, i) => {
+      cells.push({ e, t, x: ox + (i%cols)*cell + cell/2, y: oy + Math.floor(i/cols)*cell + cell/2, s: cell });
+    });
+  });
+})();
+
+const cv = $('#mapCanvas'), mctx = cv.getContext('2d');
+const tip = $('#maptip');
+let view = { x: 0, y: 0, k: 0.3 }, mapActive = false;
+const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+
+function fitView(){
+  const r = cv.getBoundingClientRect();
+  view.k = Math.min(r.width/WORLD_W, r.height/WORLD_H) * .97;
+  view.x = (r.width - WORLD_W*view.k)/2;
+  view.y = (r.height - WORLD_H*view.k)/2;
+}
+function resizeCanvas(){
+  const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  cv.width = r.width*dpr; cv.height = r.height*dpr;
+  mctx.setTransform(dpr,0,0,dpr,0,0);
+  mapDraw();
+}
+window.mapDraw = function(){
+  if(!mapActive) return;
+  const r = cv.getBoundingClientRect();
+  const dark = document.documentElement.dataset.theme === 'dark';
+  const pal = dark ? GCOLOR_DARK : GCOLOR;
+  mctx.clearRect(0,0,r.width,r.height);
+  mctx.save();
+  mctx.translate(view.x, view.y); mctx.scale(view.k, view.k);
+  const vx0 = -view.x/view.k, vy0 = -view.y/view.k, vx1 = vx0 + r.width/view.k, vy1 = vy0 + r.height/view.k;
+  // territories
+  territories.forEach(t => {
+    const {x,y,w,h} = t.rect;
+    if(x > vx1 || y > vy1 || x+w < vx0 || y+h < vy0) return;
+    const [bg, line] = pal[t.g] || ['#eee','#999'];
+    mctx.fillStyle = bg;
+    roundRect(x+4, y+4, w-8, h-8, 18); mctx.fill();
+    mctx.strokeStyle = line; mctx.lineWidth = 2/view.k; mctx.globalAlpha = .5;
+    roundRect(x+4, y+4, w-8, h-8, 18); mctx.stroke();
+    mctx.globalAlpha = 1;
+    const [ico, kname] = CAT[t.g] || ['🔸', t.g];
+    const fs = Math.min(30, Math.max(15, 15/Math.sqrt(view.k)));
+    mctx.font = `800 ${fs}px -apple-system,"Pretendard","Noto Sans KR",sans-serif`;
+    mctx.fillStyle = line;
+    mctx.textBaseline = 'top'; mctx.textAlign = 'left';
+    mctx.fillText(`${ico} ${kname} · ${t.list.length}`, x+20, y+14);
+  });
+  // emoji cells (skip when too small to see)
+  const px = view.k * cells[0].s;
+  if(px > 7){
+    mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+    let lastFont = 0;
+    cells.forEach(c => {
+      if(c.x < vx0-c.s || c.x > vx1+c.s || c.y < vy0-c.s || c.y > vy1+c.s) return;
+      const dim = currentPred && !currentPred(c.e);
+      mctx.globalAlpha = dim ? .12 : 1;
+      const fs = Math.round(c.s*.72);
+      if(fs !== lastFont){ mctx.font = `${fs}px ${EMOJI_FONT}`; lastFont = fs; }
+      mctx.fillText(applyTone(c.e), c.x, c.y + c.s*.03);
+    });
+    mctx.globalAlpha = 1;
+  }
+  mctx.restore();
+};
+function roundRect(x,y,w,h,r){
+  mctx.beginPath();
+  mctx.moveTo(x+r,y); mctx.arcTo(x+w,y,x+w,y+h,r); mctx.arcTo(x+w,y+h,x,y+h,r);
+  mctx.arcTo(x,y+h,x,y,r); mctx.arcTo(x,y,x+w,y,r); mctx.closePath();
+}
+
+/* pan / zoom / pick */
+let drag = null, moved = false;
+cv.addEventListener('pointerdown', e => {
+  drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }; moved = false;
+  cv.setPointerCapture(e.pointerId); cv.classList.add('grabbing');
+});
+cv.addEventListener('pointermove', e => {
+  if(drag){
+    const dx = e.clientX-drag.x, dy = e.clientY-drag.y;
+    if(Math.hypot(dx,dy) > 4) moved = true;
+    if(moved){ view.x = drag.vx+dx; view.y = drag.vy+dy; mapDraw(); tip.style.opacity = 0; }
+  } else {
+    const c = pick(e);
+    if(c){
+      tip.style.opacity = 1;
+      const rect = cv.getBoundingClientRect();
+      tip.style.left = (e.clientX-rect.left)+'px'; tip.style.top = (e.clientY-rect.top)+'px';
+      tip.innerHTML = `<span class="tbig">${applyTone(c.e)}</span>${c.e.k || c.e.n}`;
+      cv.style.cursor = 'pointer';
+    } else { tip.style.opacity = 0; cv.style.cursor = 'grab'; }
+  }
+});
+cv.addEventListener('pointerup', e => {
+  cv.classList.remove('grabbing');
+  if(drag && !moved){
+    const c = pick(e);
+    if(c){ copyEmoji(applyTone(c.e), c.e); openPanel(c.e); }
+  }
+  drag = null;
+});
+cv.addEventListener('pointerleave', () => { tip.style.opacity = 0; });
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX-rect.left, my = e.clientY-rect.top;
+  zoomAt(mx, my, Math.exp(-e.deltaY*.0016));
+}, {passive:false});
+cv.addEventListener('dblclick', e => {
+  const rect = cv.getBoundingClientRect();
+  zoomAt(e.clientX-rect.left, e.clientY-rect.top, 1.8);
+});
+function zoomAt(mx, my, f){
+  const k2 = Math.min(6, Math.max(0.12, view.k*f));
+  f = k2/view.k;
+  view.x = mx - (mx-view.x)*f; view.y = my - (my-view.y)*f; view.k = k2;
+  mapDraw();
+}
+function pick(e){
+  const rect = cv.getBoundingClientRect();
+  const wx = (e.clientX-rect.left-view.x)/view.k, wy = (e.clientY-rect.top-view.y)/view.k;
+  if(view.k*cells[0].s <= 7) return null;
+  for(const t of territories){
+    const {x,y,w,h} = t.rect;
+    if(wx < x || wx > x+w || wy < y || wy > y+h) continue;
+    const col = Math.floor((wx-t.ox)/t.cell), row = Math.floor((wy-t.oy)/t.cell);
+    if(col < 0 || col >= t.cols || row < 0) return null;
+    const i = row*t.cols+col;
+    if(i >= t.list.length) return null;
+    const c = cells.find(cc => cc.e === t.list[i]);
+    if(c && currentPred && !currentPred(c.e)) return null;
+    return c;
+  }
+  return null;
+}
+window.mapFlyTo = function(gname){
+  const t = territories.find(t => t.g === gname); if(!t) return;
+  const r = cv.getBoundingClientRect();
+  const k = Math.min(r.width/t.rect.w, r.height/t.rect.h)*.92;
+  animateView({ k, x: (r.width-t.rect.w*k)/2 - t.rect.x*k, y: (r.height-t.rect.h*k)/2 - t.rect.y*k });
+};
+function animateView(to){
+  const from = {...view}, t0 = performance.now(), dur = REDUCED ? 0 : 450;
+  (function step(now){
+    const p = dur ? Math.min(1,(now-t0)/dur) : 1, e = 1-Math.pow(1-p,3);
+    view.x = from.x+(to.x-from.x)*e; view.y = from.y+(to.y-from.y)*e; view.k = from.k+(to.k-from.k)*e;
+    mapDraw();
+    if(p < 1) requestAnimationFrame(step);
+  })(t0);
+}
+$('#zoomIn').onclick = () => { const r = cv.getBoundingClientRect(); zoomAt(r.width/2, r.height/2, 1.5); };
+$('#zoomOut').onclick = () => { const r = cv.getBoundingClientRect(); zoomAt(r.width/2, r.height/2, 1/1.5); };
+$('#zoomFit').onclick = () => { const r = cv.getBoundingClientRect(); const k = Math.min(r.width/WORLD_W, r.height/WORLD_H)*.97; animateView({k, x:(r.width-WORLD_W*k)/2, y:(r.height-WORLD_H*k)/2}); };
+
+/* view toggle */
+const viewBtn = $('#viewBtn');
+function setMapMode(on){
+  mapActive = on;
+  document.body.classList.toggle('mapmode', on);
+  viewBtn.textContent = on ? '📋 목록뷰' : '🗺️ 지도뷰';
+  store.set('mapmode', on);
+  if(on){ requestAnimationFrame(() => { resizeCanvas(); fitView(); mapDraw(); }); }
+}
+viewBtn.onclick = () => setMapMode(!mapActive);
+addEventListener('resize', () => { if(mapActive) resizeCanvas(); });
+if(store.get('mapmode', false)) setMapMode(true);
 
 /* ---------- active category on scroll ---------- */
 const headers = [...document.querySelectorAll('.group>h2')];
