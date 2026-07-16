@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emoji Map — 한눈에 보는 이모지 지도</title>
+<meta name="description" content="광고 없이 한 페이지에서 모든 이모지를 탐색·검색·복사하세요. 무드 추천, 스킨톤, 즐겨찾기, 조합 기능까지.">
+<style>
+:root{
+  --bg:#fafafa; --panel:#ffffff; --text:#1a1a1a; --sub:#6b7280; --line:#e5e7eb;
+  --accent:#6366f1; --accent-soft:#eef2ff; --chip:#f3f4f6; --shadow:0 8px 30px rgba(0,0,0,.08);
+}
+[data-theme="dark"]{
+  --bg:#0f1115; --panel:#171a21; --text:#f0f1f4; --sub:#9aa3b2; --line:#262b36;
+  --accent:#818cf8; --accent-soft:#23263c; --chip:#22262f; --shadow:0 8px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Pretendard","Noto Sans KR",sans-serif;line-height:1.5}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+
+/* header */
+header{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.hwrap{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.logo{font-size:20px;font-weight:800;letter-spacing:-.5px;white-space:nowrap}
+.logo span{color:var(--accent)}
+.search{flex:1;min-width:200px;position:relative}
+.search input{width:100%;padding:10px 14px 10px 38px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);font-size:15px;outline:none;transition:border .15s}
+.search input:focus{border-color:var(--accent)}
+.search .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.5}
+.hbtn{padding:8px 12px;border-radius:10px;background:var(--chip);font-size:14px;white-space:nowrap}
+.hbtn:hover{background:var(--accent-soft)}
+.skin-picker{display:flex;gap:2px;background:var(--chip);border-radius:10px;padding:4px}
+.skin-picker button{font-size:16px;padding:3px 5px;border-radius:7px;opacity:.55}
+.skin-picker button.on{background:var(--panel);opacity:1;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+
+/* category nav */
+nav.cats{position:sticky;top:57px;z-index:40;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.cwrap{max-width:1200px;margin:0 auto;padding:8px 16px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.cwrap::-webkit-scrollbar{display:none}
+.cat-btn{display:flex;gap:6px;align-items:center;padding:6px 12px;border-radius:999px;background:var(--chip);font-size:13.5px;white-space:nowrap;color:var(--sub);font-weight:600}
+.cat-btn.on,.cat-btn:hover{background:var(--accent-soft);color:var(--accent)}
+
+main{max-width:1200px;margin:0 auto;padding:16px}
+
+/* mood collections */
+.moods{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 14px;scrollbar-width:none}
+.moods::-webkit-scrollbar{display:none}
+.mood{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px;border-radius:14px;background:var(--panel);border:1.5px solid var(--line);min-width:118px;text-align:left;transition:transform .12s,border-color .12s}
+.mood:hover{transform:translateY(-2px);border-color:var(--accent)}
+.mood.on{border-color:var(--accent);background:var(--accent-soft)}
+.mood .mico{font-size:20px}
+.mood .mname{font-size:13px;font-weight:700}
+.mood .mdesc{font-size:11px;color:var(--sub)}
+
+/* pinned rows */
+.pinned{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.pinrow{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 12px;min-height:48px}
+.pinrow .plabel{font-size:12.5px;font-weight:700;color:var(--sub);white-space:nowrap;width:70px}
+.pinrow .pemo{display:flex;gap:2px;overflow-x:auto;flex:1;scrollbar-width:none}
+.pinrow .pemo::-webkit-scrollbar{display:none}
+.pinrow .pemo button{font-size:22px;padding:2px 4px;border-radius:8px}
+.pinrow .pemo button:hover{background:var(--chip)}
+.pinrow .empty{font-size:12.5px;color:var(--sub);opacity:.7}
+.pinrow .pclear{font-size:12px;color:var(--sub);padding:4px 8px;border-radius:8px}
+.pinrow .pclear:hover{background:var(--chip)}
+
+/* sections & grid */
+.group{margin-bottom:8px}
+.group>h2{font-size:19px;font-weight:800;padding:18px 2px 4px;display:flex;gap:8px;align-items:center;scroll-margin-top:120px}
+.group>h2 .gcount{font-size:12px;color:var(--sub);font-weight:600;background:var(--chip);border-radius:999px;padding:2px 9px}
+.sub h3{font-size:12.5px;font-weight:700;color:var(--sub);padding:10px 2px 6px;text-transform:capitalize}
+.egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:2px}
+.e{font-size:26px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:10px;position:relative;transition:background .1s;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.e:hover{background:var(--accent-soft);transform:scale(1.12)}
+.e.has-skin::after{content:"";position:absolute;right:5px;bottom:5px;width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.65}
+.hidden{display:none!important}
+.no-result{text-align:center;color:var(--sub);padding:60px 0;font-size:15px}
+
+/* detail panel */
+.panel{position:fixed;right:16px;bottom:16px;width:340px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px;z-index:60;display:none}
+.panel.open{display:block}
+.panel .close{position:absolute;top:10px;right:12px;font-size:18px;color:var(--sub);padding:4px 8px;border-radius:8px}
+.panel .close:hover{background:var(--chip)}
+.panel .big{font-size:56px;line-height:1.1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.panel .names{margin:6px 0 2px}
+.panel .kname{font-size:16px;font-weight:800}
+.panel .ename{font-size:13px;color:var(--sub)}
+.panel .meta{font-size:11.5px;color:var(--sub);margin-bottom:10px}
+.panel .acts{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.panel .acts button{font-size:13px;font-weight:600;padding:7px 11px;border-radius:10px;background:var(--chip)}
+.panel .acts button:hover{background:var(--accent-soft)}
+.panel .acts button.primary{background:var(--accent);color:#fff}
+.panel .vari,.panel .rel{display:flex;gap:2px;flex-wrap:wrap;margin-top:4px}
+.panel .vari button,.panel .rel button{font-size:24px;padding:3px;border-radius:8px}
+.panel .vari button:hover,.panel .rel button:hover{background:var(--chip)}
+.panel h4{font-size:11.5px;color:var(--sub);font-weight:700;margin-top:10px;text-transform:uppercase;letter-spacing:.4px}
+
+/* combo bar */
+.combo{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:8px 12px;display:none;align-items:center;gap:8px;z-index:55;max-width:calc(100vw - 32px)}
+.combo.show{display:flex}
+.combo .cstr{font-size:22px;max-width:40vw;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.combo button{font-size:13px;font-weight:600;padding:6px 10px;border-radius:9px;background:var(--chip)}
+.combo button.primary{background:var(--accent);color:#fff}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:9px 18px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:100}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+footer{max-width:1200px;margin:30px auto 0;padding:20px 16px 40px;color:var(--sub);font-size:12.5px;border-top:1px solid var(--line)}
+footer a{color:var(--accent)}
+@media (max-width:640px){
+  .e{font-size:23px;height:42px}
+  .egrid{grid-template-columns:repeat(auto-fill,minmax(42px,1fr))}
+  .panel{left:16px;right:16px;width:auto;bottom:70px}
+  .pinrow .plabel{width:56px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <div class="logo">🗺️ Emoji<span>Map</span></div>
+    <div class="search">
+      <span class="icon">🔍</span>
+      <input id="q" type="search" placeholder="이모지 검색 — 한국어/영어 (예: 하트, party, 고양이)" autocomplete="off">
+    </div>
+    <div class="skin-picker" id="skins" title="스킨톤 선택"></div>
+    <button class="hbtn" id="randomBtn" title="랜덤 이모지">🎲 랜덤</button>
+    <button class="hbtn" id="themeBtn" title="테마 전환">🌙</button>
+  </div>
+</header>
+
+<nav class="cats"><div class="cwrap" id="catnav"></div></nav>
+
+<main>
+  <div class="moods" id="moods"></div>
+  <div class="pinned">
+    <div class="pinrow" id="rowRecent">
+      <span class="plabel">🕘 최근</span><div class="pemo"></div>
+      <button class="pclear" data-clear="recent">지우기</button>
+    </div>
+    <div class="pinrow" id="rowFav">
+      <span class="plabel">⭐ 즐겨찾기</span><div class="pemo"></div>
+      <button class="pclear" data-clear="fav">지우기</button>
+    </div>
+  </div>
+  <div id="map"></div>
+  <div class="no-result hidden" id="noResult">검색 결과가 없어요 😢 다른 키워드로 시도해 보세요</div>
+</main>
+
+<aside class="panel" id="panel">
+  <button class="close" id="panelClose">✕</button>
+  <div class="big" id="pBig"></div>
+  <div class="names"><div class="kname" id="pKo"></div><div class="ename" id="pEn"></div></div>
+  <div class="meta" id="pMeta"></div>
+  <div class="acts">
+    <button class="primary" id="pCopy">복사</button>
+    <button id="pFav">☆ 즐겨찾기</button>
+    <button id="pCombo">➕ 조합에 추가</button>
+  </div>
+  <div id="pVariWrap"><h4>스킨톤 변형</h4><div class="vari" id="pVari"></div></div>
+  <div><h4>비슷한 이모지</h4><div class="rel" id="pRel"></div></div>
+</aside>
+
+<div class="combo" id="combo">
+  <div class="cstr" id="comboStr"></div>
+  <button class="primary" id="comboCopy">조합 복사</button>
+  <button id="comboClear">비우기</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <b>EmojiMap</b> — 광고 없이, 한 페이지에서 모든 이모지를. Unicode Emoji <span id="fVer"></span> 기준 · 데이터: <a href="https://unicode.org/emoji/charts/full-emoji-list.html" target="_blank" rel="noopener">Unicode</a> + <a href="https://cldr.unicode.org/" target="_blank" rel="noopener">CLDR</a> 주석 · 이모지를 클릭하면 바로 복사됩니다. 최신 이모지는 기기/OS가 지원해야 보입니다.
+</footer>
+
+<script src="emoji-data.js"></script>
+<script>
+const DATA = window.EMOJI_DATA;
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ return JSON.parse(localStorage.getItem('em_'+k)) ?? d }catch{ return d } },
+  set(k, v){ localStorage.setItem('em_'+k, JSON.stringify(v)) }
+};
+
+/* ---------- category meta (Korean labels + icons) ---------- */
+const CAT = {
+  'Smileys & Emotion': ['😀','표정·감정'], 'People & Body': ['🧑','사람·동작'],
+  'Animals & Nature': ['🐻','동물·자연'], 'Food & Drink': ['🍔','음식·음료'],
+  'Travel & Places': ['✈️','여행·장소'], 'Activities': ['⚽','활동·이벤트'],
+  'Objects': ['💡','사물'], 'Symbols': ['🔣','기호'], 'Flags': ['🚩','국기']
+};
+
+/* ---------- mood collections (curated) ---------- */
+const MOODS = [
+  {ico:'🎉', name:'축하', desc:'생일·합격·기념일', e:'🎉🎊🥳🎂🎁🎈🍾🥂✨🎇🎆👏🙌💐🏆🌟'},
+  {ico:'❤️', name:'사랑·애정', desc:'고백·연애·달달함', e:'❤️🥰😍😘💕💖💘💝💞💓💗😻💋🌹💑💍'},
+  {ico:'🙏', name:'감사·사과', desc:'고마움과 미안함', e:'🙏🥹😊🙇💐🤝🫶💛😔🙇‍♀️🙇‍♂️🥲🌷✨'},
+  {ico:'😂', name:'웃김·유머', desc:'빵 터졌을 때', e:'😂🤣💀😹😆😝🤪🙃😜🤭😏🐒'},
+  {ico:'😢', name:'슬픔·위로', desc:'힘든 날, 토닥토닥', e:'😢😭🥺💔😞😔🫂🤗💧🌧️🫠🥀'},
+  {ico:'💪', name:'응원·화이팅', desc:'파이팅! 할 수 있어', e:'💪🔥✊👊🙌⚡🚀🏃💯🌈🍀🤜🤛📣'},
+  {ico:'💼', name:'일·업무', desc:'회사·마감·회의', e:'💼💻📈📊📅✅📝☕🗂️⏰📌🤝📧🧾'},
+  {ico:'🍽️', name:'먹방·맛집', desc:'오늘 뭐 먹지?', e:'🍕🍔🍜🍣🍗🥘🍰🧋☕🍺🥓🤤😋🍽️🥟🍦'},
+  {ico:'🌴', name:'여행·휴가', desc:'떠나고 싶을 때', e:'✈️🌴🏖️🧳🗺️📸🏔️🚗🌅🛫🏝️⛱️🚄🎒'},
+  {ico:'😴', name:'피곤·귀찮', desc:'월요병·번아웃', e:'😴🥱💤😪🛌🫠😮‍💨🧟☠️🥴🙄😑'},
+  {ico:'🎮', name:'취미·놀이', desc:'게임·운동·음악', e:'🎮⚽🏀🎸🎧🎬📚🎨🧩🎤🏋️🚴🎳♟️'},
+  {ico:'🌸', name:'계절·날씨', desc:'봄여름가을겨울', e:'🌸☀️🌊🍂❄️⛄🌧️🌈🍁🌺🎑☔🌞🌙'},
+];
+
+/* ---------- flatten & index ---------- */
+const ALL = [];            // every base emoji entry
+const byChar = new Map();
+DATA.forEach(g => g.subs.forEach(sub => sub.emoji.forEach(e => {
+  e.group = g.name; e.sub = sub.name;
+  e.search = (e.n + ' ' + e.k + ' ' + e.kw + ' ' + sub.name.replace(/-/g,' ')).toLowerCase();
+  ALL.push(e); byChar.set(e.c, e);
+})));
+
+/* ---------- skin tone ---------- */
+const TONES = ['✋','✋🏻','✋🏼','✋🏽','✋🏾','✋🏿'];
+let tone = store.get('tone', 0);
+function applyTone(e){ return (tone > 0 && e.s && e.s[tone-1]) ? e.s[tone-1] : e.c }
+const skinsEl = $('#skins');
+TONES.forEach((t,i)=>{
+  const b = document.createElement('button');
+  b.textContent = t; b.title = i===0?'기본':'스킨톤 '+i;
+  b.onclick = ()=>{ tone=i; store.set('tone',i); renderTonesState(); refreshAllGlyphs(); };
+  skinsEl.appendChild(b);
+});
+function renderTonesState(){ [...skinsEl.children].forEach((b,i)=>b.classList.toggle('on', i===tone)) }
+renderTonesState();
+
+/* ---------- build map ---------- */
+const mapEl = $('#map');
+const catnav = $('#catnav');
+DATA.forEach((g, gi) => {
+  const [ico, kname] = CAT[g.name] || ['🔸', g.name];
+  const nb = document.createElement('button');
+  nb.className = 'cat-btn'; nb.innerHTML = ico + ' ' + kname;
+  nb.onclick = () => document.getElementById('g'+gi).scrollIntoView();
+  catnav.appendChild(nb);
+
+  const sec = document.createElement('section');
+  sec.className = 'group'; sec.dataset.gi = gi;
+  const count = g.subs.reduce((a,s)=>a+s.emoji.length,0);
+  sec.innerHTML = `<h2 id="g${gi}">${ico} ${kname} <span class="gcount">${count}</span></h2>`;
+  g.subs.forEach(sub => {
+    const sd = document.createElement('div'); sd.className='sub';
+    sd.innerHTML = `<h3>${sub.name.replace(/-/g,' ')}</h3>`;
+    const grid = document.createElement('div'); grid.className='egrid';
+    sub.emoji.forEach(e => {
+      const b = document.createElement('button');
+      b.className = 'e' + (e.s ? ' has-skin' : '');
+      b.textContent = applyTone(e);
+      b.title = (e.k ? e.k + ' · ' : '') + e.n;
+      b.dataset.c = e.c;
+      grid.appendChild(b);
+    });
+    sd.appendChild(grid); sec.appendChild(sd);
+  });
+  mapEl.appendChild(sec);
+});
+$('#fVer').textContent = window.EMOJI_VERSION;
+
+function refreshAllGlyphs(){
+  mapEl.querySelectorAll('.e').forEach(b => { b.textContent = applyTone(byChar.get(b.dataset.c)) });
+}
+
+/* ---------- click: copy + detail ---------- */
+mapEl.addEventListener('click', ev => {
+  const b = ev.target.closest('.e'); if(!b) return;
+  const e = byChar.get(b.dataset.c);
+  copyEmoji(applyTone(e), e);
+  openPanel(e);
+});
+
+function copyEmoji(ch, e){
+  navigator.clipboard.writeText(ch).then(()=>toast(ch + ' 복사됨!'));
+  if(e){
+    let r = store.get('recent', []).filter(c => c !== e.c);
+    r.unshift(e.c); store.set('recent', r.slice(0,24)); renderPins();
+  }
+}
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 1400);
+}
+
+/* ---------- detail panel ---------- */
+let panelEmoji = null;
+function openPanel(e){
+  panelEmoji = e;
+  $('#pBig').textContent = applyTone(e);
+  $('#pKo').textContent = e.k || e.n;
+  $('#pEn').textContent = e.n;
+  $('#pMeta').textContent = `Unicode E${e.v} · ${e.group} › ${e.sub.replace(/-/g,' ')}`;
+  const favs = store.get('fav', []);
+  $('#pFav').textContent = favs.includes(e.c) ? '★ 즐겨찾기 해제' : '☆ 즐겨찾기';
+  // skin variants
+  const vw = $('#pVariWrap'), vv = $('#pVari'); vv.innerHTML = '';
+  if(e.s){
+    vw.classList.remove('hidden');
+    [e.c, ...e.s].forEach(ch => {
+      const b = document.createElement('button'); b.textContent = ch;
+      b.onclick = () => copyEmoji(ch, e);
+      vv.appendChild(b);
+    });
+  } else vw.classList.add('hidden');
+  // related: same subgroup neighbors
+  const rel = $('#pRel'); rel.innerHTML = '';
+  const sibs = ALL.filter(x => x.sub === e.sub && x.c !== e.c).slice(0, 14);
+  sibs.forEach(x => {
+    const b = document.createElement('button'); b.textContent = applyTone(x); b.title = x.k || x.n;
+    b.onclick = () => { copyEmoji(applyTone(x), x); openPanel(x); };
+    rel.appendChild(b);
+  });
+  $('#panel').classList.add('open');
+}
+$('#panelClose').onclick = () => $('#panel').classList.remove('open');
+$('#pCopy').onclick = () => panelEmoji && copyEmoji(applyTone(panelEmoji), panelEmoji);
+$('#pFav').onclick = () => {
+  if(!panelEmoji) return;
+  let f = store.get('fav', []);
+  f = f.includes(panelEmoji.c) ? f.filter(c=>c!==panelEmoji.c) : [...f, panelEmoji.c];
+  store.set('fav', f); renderPins(); openPanel(panelEmoji);
+};
+$('#pCombo').onclick = () => { if(panelEmoji){ combo.push(applyTone(panelEmoji)); renderCombo(); toast('조합에 추가!'); } };
+
+/* ---------- recent / fav rows ---------- */
+function renderPins(){
+  [['recent','#rowRecent','아직 사용한 이모지가 없어요'],['fav','#rowFav','자주 쓰는 이모지를 ⭐로 저장하세요']].forEach(([k, sel, empty])=>{
+    const wrap = document.querySelector(sel + ' .pemo'); wrap.innerHTML = '';
+    const list = store.get(k, []);
+    if(!list.length){ wrap.innerHTML = `<span class="empty">${empty}</span>`; return; }
+    list.forEach(c => {
+      const e = byChar.get(c); if(!e) return;
+      const b = document.createElement('button'); b.textContent = applyTone(e); b.title = e.k || e.n;
+      b.onclick = () => { copyEmoji(applyTone(e), e); openPanel(e); };
+      wrap.appendChild(b);
+    });
+  });
+}
+document.querySelectorAll('.pclear').forEach(b => b.onclick = () => { store.set(b.dataset.clear, []); renderPins(); });
+renderPins();
+
+/* ---------- combo ---------- */
+let combo = [];
+function renderCombo(){
+  $('#combo').classList.toggle('show', combo.length > 0);
+  $('#comboStr').textContent = combo.join('');
+}
+$('#comboCopy').onclick = () => { navigator.clipboard.writeText(combo.join('')).then(()=>toast('조합 복사됨! ' + combo.join(''))); };
+$('#comboClear').onclick = () => { combo = []; renderCombo(); };
+
+/* ---------- moods ---------- */
+const moodsEl = $('#moods');
+let activeMood = null;
+const seg = s => [...new Intl.Segmenter('ko',{granularity:'grapheme'}).segment(s)].map(x=>x.segment);
+MOODS.forEach((m, i) => {
+  const b = document.createElement('button');
+  b.className = 'mood';
+  b.innerHTML = `<span class="mico">${m.ico}</span><span class="mname">${m.name}</span><span class="mdesc">${m.desc}</span>`;
+  b.onclick = () => {
+    if(activeMood === i){ activeMood = null; clearFilter(); }
+    else { activeMood = i; filterBySet(new Set(seg(m.e))); }
+    [...moodsEl.children].forEach((x,j)=>x.classList.toggle('on', j===activeMood));
+  };
+  moodsEl.appendChild(b);
+});
+
+/* ---------- search & filter ---------- */
+const qEl = $('#q');
+let debounce;
+qEl.addEventListener('input', () => {
+  clearTimeout(debounce);
+  debounce = setTimeout(() => {
+    activeMood = null; [...moodsEl.children].forEach(x=>x.classList.remove('on'));
+    const q = qEl.value.trim().toLowerCase();
+    if(!q){ clearFilter(); return; }
+    applyFilter(e => e.search.includes(q) || e.c === q);
+  }, 120);
+});
+function filterBySet(set){ qEl.value = ''; applyFilter(e => set.has(e.c)); }
+function clearFilter(){ applyFilter(null); }
+function applyFilter(pred){
+  let any = false;
+  mapEl.querySelectorAll('.egrid').forEach(grid => {
+    let vis = 0;
+    grid.querySelectorAll('.e').forEach(b => {
+      const ok = !pred || pred(byChar.get(b.dataset.c));
+      b.classList.toggle('hidden', !ok); if(ok) vis++;
+    });
+    grid.parentElement.classList.toggle('hidden', vis === 0);
+    if(vis) any = true;
+  });
+  mapEl.querySelectorAll('.group').forEach(sec => {
+    const vis = [...sec.querySelectorAll('.sub')].some(s => !s.classList.contains('hidden'));
+    sec.classList.toggle('hidden', !vis);
+  });
+  $('#noResult').classList.toggle('hidden', any);
+}
+document.addEventListener('keydown', e => {
+  if(e.key === '/' && document.activeElement !== qEl){ e.preventDefault(); qEl.focus(); }
+  if(e.key === 'Escape'){ $('#panel').classList.remove('open'); if(qEl.value){ qEl.value=''; clearFilter(); } }
+});
+
+/* ---------- random ---------- */
+$('#randomBtn').onclick = () => {
+  const e = ALL[Math.floor(Math.random() * ALL.length)];
+  copyEmoji(applyTone(e), e); openPanel(e);
+  const btn = mapEl.querySelector(`.e[data-c="${CSS.escape(e.c)}"]`);
+  if(btn && !btn.classList.contains('hidden')) btn.scrollIntoView({block:'center'});
+};
+
+/* ---------- theme ---------- */
+let theme = store.get('theme', matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+function applyTheme(){ document.documentElement.dataset.theme = theme; $('#themeBtn').textContent = theme==='dark'?'☀️':'🌙'; }
+$('#themeBtn').onclick = () => { theme = theme==='dark'?'light':'dark'; store.set('theme', theme); applyTheme(); };
+applyTheme();
+
+/* ---------- active category on scroll ---------- */
+const headers = [...document.querySelectorAll('.group>h2')];
+addEventListener('scroll', () => {
+  let idx = 0;
+  headers.forEach((h,i) => { if(h.getBoundingClientRect().top < 140) idx = i; });
+  [...catnav.children].forEach((b,i)=>b.classList.toggle('on', i===idx));
+}, {passive:true});
+</script>
+</body>
+</html>
