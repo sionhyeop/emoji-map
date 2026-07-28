@@ -126,6 +126,9 @@ body.mapmode #mapview{height:calc(100vh - 210px)}
 .zoomctl button{width:38px;height:38px;border-radius:11px;background:var(--panel);border:1px solid var(--line);font-size:17px;font-weight:700;box-shadow:var(--shadow)}
 .zoomctl button:hover{background:var(--accent-soft)}
 .maphint{position:absolute;left:14px;bottom:12px;font-size:12px;color:var(--sub);background:color-mix(in srgb,var(--panel) 80%,transparent);backdrop-filter:blur(6px);padding:5px 11px;border-radius:999px;pointer-events:none}
+.mapprog{position:absolute;left:50%;top:14px;transform:translateX(-50%);width:220px;background:color-mix(in srgb,var(--panel) 85%,transparent);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:999px;padding:6px 12px;z-index:5;display:none;overflow:hidden}
+.mapprog .mpfill{position:absolute;inset:0;background:var(--accent-soft);width:0%;transition:width .2s}
+.mapprog .mplabel{position:relative;font-size:12px;font-weight:700;color:var(--sub);display:block;text-align:center}
 .maptip{position:absolute;pointer-events:none;background:var(--text);color:var(--bg);font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:9px;transform:translate(-50%,-130%);white-space:nowrap;opacity:0;transition:opacity .1s;z-index:6}
 .maptip .tbig{font-size:16px;margin-right:4px}
 /* perf: native lazy rendering of off-screen subgroups */
@@ -232,6 +235,7 @@ footer a{color:var(--accent)}
       <button id="zoomFit" title="전체 보기">⛶</button>
     </div>
     <div class="maphint">드래그로 이동 · 휠/버튼으로 줌 · 클릭하면 복사</div>
+    <div class="mapprog" id="mapProgress"><div class="mpfill"></div><span class="mplabel">🗺️ 지도 굽는 중…</span></div>
     <div class="maptip" id="maptip"></div>
   </div>
   <div id="map"></div>
@@ -763,10 +767,21 @@ const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans
 
 /* 월드 비트맵: 1,914개 글리프의 최초 래스터화(수백 ms~수초)를 유휴 시간에
    조각조각 선지불해 두고, 팬/줌은 drawImage 한 번(<1ms)으로 처리 */
-let worldBmp = null, worldReady = false, worldToken = 0;
+let worldBmp = null, worldReady = false, worldToken = 0, worldPct = 100;
+function refreshViewBtn(){
+  const btn = $('#viewBtn');
+  btn.textContent = worldPct >= 100 ? (mapActive ? '📋 목록뷰' : '🗺️ 지도뷰') : `🗺️ 준비 중 ${worldPct}%`;
+  const mp = $('#mapProgress');
+  mp.style.display = (mapActive && worldPct < 100) ? 'block' : 'none';
+  if(worldPct < 100){
+    mp.querySelector('.mpfill').style.width = worldPct + '%';
+    mp.querySelector('.mplabel').textContent = `🗺️ 지도 굽는 중 ${worldPct}%`;
+  }
+}
 window.buildWorldBitmap = function(){
   const tok = ++worldToken;
   worldReady = false;
+  worldPct = 0; refreshViewBtn();
   if(!worldBmp){ worldBmp = document.createElement('canvas'); worldBmp.width = WORLD_W; worldBmp.height = WORLD_H; }
   const wctx = worldBmp.getContext('2d');
   wctx.clearRect(0, 0, WORLD_W, WORLD_H);
@@ -782,8 +797,14 @@ window.buildWorldBitmap = function(){
       if(fs !== lastFont){ wctx.font = `${fs}px ${EMOJI_FONT}`; lastFont = fs; }
       wctx.fillText(applyTone(c.e), c.x, c.y + c.s*.03);
     }
-    if(i < cells.length) (window.requestIdleCallback || requestAnimationFrame)(step, {timeout: 1000});
-    else { worldReady = true; document.body.dataset.world = 'ready'; if(mapActive) mapDraw(); }
+    if(i < cells.length){
+      worldPct = Math.floor(i / cells.length * 100); refreshViewBtn();
+      (window.requestIdleCallback || requestAnimationFrame)(step, {timeout: 1000});
+    } else {
+      worldReady = true; worldPct = 100; refreshViewBtn();
+      document.body.dataset.world = 'ready';
+      if(mapActive) mapDraw();
+    }
   })();
 };
 
@@ -979,7 +1000,7 @@ const viewBtn = $('#viewBtn');
 function setMapMode(on){
   mapActive = on;
   document.body.classList.toggle('mapmode', on);
-  viewBtn.textContent = on ? '📋 목록뷰' : '🗺️ 지도뷰';
+  refreshViewBtn();
   store.set('mapmode', on);
   if(on){
     if(worldToken === 0) buildWorldBitmap();
