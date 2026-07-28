@@ -163,6 +163,33 @@ body.mapmode #mapview{height:calc(100vh - 210px)}
 .mix-acts{display:flex;gap:8px;justify-content:center;margin-top:12px}
 .mix-acts button{font-size:13px;font-weight:600;padding:8px 14px;border-radius:10px;background:var(--chip)}
 .mix-acts button.primary{background:var(--accent);color:#fff}
+/* game hub */
+.game-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.game-cards button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px;border-radius:16px;background:var(--chip);text-align:left;transition:transform .12s,background .12s}
+.game-cards button:hover{transform:translateY(-2px);background:var(--accent-soft)}
+.game-cards .gico{font-size:26px}
+.game-cards b{font-size:14.5px}
+.game-cards small{font-size:11.5px;color:var(--sub)}
+.game-cards em{font-size:11px;color:var(--accent);font-style:normal;font-weight:700;min-height:14px}
+/* riddle text options */
+.quiz-opts button.txt{font-size:14.5px;font-weight:700;padding:14px 8px;font-family:inherit}
+.quiz-q.riddle{font-size:34px;letter-spacing:4px}
+/* memory game */
+.mem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mem-card{aspect-ratio:1;border-radius:14px;background:var(--accent-soft);font-size:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .25s,background .2s;transform-style:preserve-3d;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.mem-card.back{background:var(--accent);color:#fff;font-size:20px}
+.mem-card.matched{background:#16a34a33;cursor:default;transform:scale(.95)}
+.mem-card.flip{transform:rotateY(180deg)}
+/* map hunt */
+.huntbar{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:70;display:none;align-items:center;gap:10px;background:var(--panel);border:2px solid var(--accent);border-radius:999px;padding:8px 16px;box-shadow:var(--shadow);max-width:calc(100vw - 24px)}
+.huntbar.show{display:flex}
+.huntbar.wrong{animation:huntshake .3s}
+@keyframes huntshake{0%,100%{transform:translateX(-50%)}25%{transform:translateX(calc(-50% - 8px))}75%{transform:translateX(calc(-50% + 8px))}}
+.huntbar .htarget{font-size:15px;font-weight:800}
+.huntbar .htarget .tg{font-size:24px;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.huntbar .hinfo{font-size:13px;color:var(--sub);font-weight:700;font-variant-numeric:tabular-nums}
+.huntbar button{font-size:12.5px;font-weight:700;padding:6px 10px;border-radius:999px;background:var(--chip)}
+.huntbar button:hover{background:var(--accent-soft)}
 /* quiz */
 .quiz-q{font-size:17px;font-weight:800;text-align:center;margin:14px 0 4px;min-height:26px}
 .quiz-hint{font-size:12.5px;color:var(--sub);text-align:center;margin-bottom:14px}
@@ -200,7 +227,7 @@ footer a{color:var(--accent)}
     <div class="skin-picker" id="skins" title="스킨톤 선택"></div>
     <button class="hbtn" id="viewBtn" title="지도 뷰 전환">🗺️ 지도뷰</button>
     <button class="hbtn" id="mixBtn" title="이모지 두 개를 합성">🧪 믹서</button>
-    <button class="hbtn" id="quizBtn" title="이모지 맞히기 게임">🎯 퀴즈</button>
+    <button class="hbtn" id="gameBtn" title="이모지 게임 4종">🎮 게임</button>
     <button class="hbtn" id="randomBtn" title="랜덤 이모지">🎲 랜덤</button>
     <button class="hbtn" id="themeBtn" title="테마 전환" aria-label="다크/라이트 테마 전환">🌙</button>
   </div>
@@ -216,6 +243,9 @@ footer a{color:var(--accent)}
     </div>
     <div class="pinrow" id="rowTop">
       <span class="plabel">🔥 인기</span><div class="pemo"></div>
+    </div>
+    <div class="pinrow hidden" id="rowForYou">
+      <span class="plabel">✨ 추천</span><div class="pemo"></div>
     </div>
     <div class="pinrow" id="rowRecent">
       <span class="plabel">🕘 최근</span><div class="pemo"></div>
@@ -256,6 +286,7 @@ footer a{color:var(--accent)}
   </div>
   <div id="pVariWrap"><h4>스킨톤 변형</h4><div class="vari" id="pVari"></div></div>
   <div><h4>비슷한 이모지</h4><div class="rel" id="pRel"></div></div>
+  <div id="pRecWrap" class="hidden"><h4>🔮 어울리는 조합</h4><div class="rel" id="pRec"></div></div>
 </aside>
 
 <div class="combo" id="combo">
@@ -287,14 +318,48 @@ footer a{color:var(--accent)}
   </div>
 </div>
 
-<!-- quiz -->
+<!-- game hub -->
+<div class="modal-bg" id="gameModal">
+  <div class="modal">
+    <button class="mclose" data-close="gameModal">✕</button>
+    <h3>🎮 이모지 게임</h3>
+    <div class="msub">최고 기록은 자동 저장돼요</div>
+    <div class="game-cards">
+      <button data-game="name"><span class="gico">🎯</span><b>이름 퀴즈</b><small>이름 보고 이모지 찾기</small><em id="bestName"></em></button>
+      <button data-game="riddle"><span class="gico">🧩</span><b>수수께끼</b><small>이모지로 속담·영화 맞히기</small><em id="bestRiddle"></em></button>
+      <button data-game="hunt"><span class="gico">🔍</span><b>지도에서 찾기</b><small>지도를 뒤져 타깃 찾기</small><em id="bestHunt"></em></button>
+      <button data-game="mem"><span class="gico">🃏</span><b>짝 맞추기</b><small>카드 뒤집기 기억력</small><em id="bestMem"></em></button>
+    </div>
+  </div>
+</div>
+
+<!-- quiz (이름/수수께끼 공용) -->
 <div class="modal-bg" id="quizModal">
   <div class="modal">
     <button class="mclose" data-close="quizModal">✕</button>
-    <h3>🎯 이모지 퀴즈</h3>
-    <div class="msub">이름을 보고 맞는 이모지를 고르세요! (10문제)</div>
+    <h3 id="quizTitle">🎯 이모지 퀴즈</h3>
+    <div class="msub" id="quizDesc"></div>
     <div id="quizBody"></div>
   </div>
+</div>
+
+<!-- memory game -->
+<div class="modal-bg" id="memModal">
+  <div class="modal">
+    <button class="mclose" data-close="memModal">✕</button>
+    <h3>🃏 짝 맞추기</h3>
+    <div class="msub">같은 이모지 두 장을 찾아 모두 맞추세요</div>
+    <div class="quiz-bar"><span id="memMoves"></span><span id="memTime"></span></div>
+    <div class="mem-grid" id="memGrid"></div>
+  </div>
+</div>
+
+<!-- map hunt banner -->
+<div class="huntbar" id="huntBar">
+  <span class="htarget" id="huntTarget"></span>
+  <span class="hinfo" id="huntInfo"></span>
+  <button id="huntHint">💡 힌트 +3초</button>
+  <button id="huntQuit">포기</button>
 </div>
 
 <footer>
@@ -508,6 +573,7 @@ function openPanel(e){
     b.onclick = () => { copyEmoji(applyTone(x), x); openPanel(x); };
     rel.appendChild(b);
   });
+  if(window.renderPanelRecs) renderPanelRecs(e);
   $('#panel').classList.add('open');
 }
 function closePanel(){
@@ -534,6 +600,7 @@ function renderPins(){
       wrap.appendChild(b);
     });
   });
+  if(window.renderForYou) renderForYou();
 }
 document.querySelectorAll('.pclear').forEach(b => b.onclick = () => { store.set(b.dataset.clear, []); renderPins(); });
 renderPins();
@@ -608,6 +675,7 @@ document.addEventListener('keydown', e => {
   if(e.key === '/' && document.activeElement !== qEl){ e.preventDefault(); qEl.focus(); }
   if(e.key === 'Escape'){
     document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    if(window.endHunt && window.hunt) endHunt();
     closePanel();
     if(qEl.value){ qEl.value=''; clearFilter(); }
     if(activeMood !== null){ activeMood = null; [...moodsEl.children].forEach(x=>x.classList.remove('on')); clearFilter(); }
@@ -930,7 +998,8 @@ function endPtr(e){
   cv.classList.remove('grabbing');
   if(e.type === 'pointerup' && drag && !moved){
     const c = pick(e);
-    if(c){ copyEmoji(applyTone(c.e), c.e); openPanel(c.e); }
+    if(c && hunt){ huntPick(c); }
+    else if(c){ copyEmoji(applyTone(c.e), c.e); openPanel(c.e); }
     else {
       // 이모지가 안 보이는 배율이면 클릭 지점으로 확대 (지도 앱과 동일한 직관)
       const rect = cv.getBoundingClientRect();
@@ -999,6 +1068,7 @@ $('#zoomFit').onclick = () => { const r = cv.getBoundingClientRect(); const k = 
 const viewBtn = $('#viewBtn');
 function setMapMode(on){
   mapActive = on;
+  if(!on && window.endHunt && hunt) endHunt();
   document.body.classList.toggle('mapmode', on);
   refreshViewBtn();
   store.set('mapmode', on);
@@ -1213,59 +1283,293 @@ $('#mixDownload').onclick = async () => {
 $('#mixBtn').onclick = () => openMix();
 $('#pMix').onclick = () => { if(panelEmoji){ $('#panel').classList.remove('open'); openMix(panelEmoji.c); } };
 
-/* ================= 🎯 이모지 퀴즈 ================= */
+/* ================= 🎮 게임: 이름 퀴즈 & 수수께끼 (공용 모달) ================= */
 const QUIZ_POOL = ALL.filter(e => e.k && ['Smileys & Emotion','Animals & Nature','Food & Drink','Activities','Travel & Places','Objects'].includes(e.group));
+const RIDDLES = [
+  {q:'🥚🪨', a:'계란으로 바위 치기'}, {q:'🐦🦶🩸', a:'새 발의 피'},
+  {q:'🐮👂📖', a:'소 귀에 경 읽기'}, {q:'🐵🌳⬇️', a:'원숭이도 나무에서 떨어진다'},
+  {q:'🛌🍡', a:'누워서 떡 먹기'}, {q:'🕳️💧🐸', a:'우물 안 개구리'},
+  {q:'🌌⭐🤏', a:'하늘의 별 따기'}, {q:'🐋🥊🦐', a:'고래 싸움에 새우 등 터진다'},
+  {q:'🪔⬇️🌑', a:'등잔 밑이 어둡다'}, {q:'✨➕⛰️', a:'티끌 모아 태산'},
+  {q:'📄🤝', a:'백지장도 맞들면 낫다'}, {q:'🐯💬✨', a:'호랑이도 제 말 하면 온다'},
+  {q:'🚢🧊💔', a:'타이타닉'}, {q:'🦁👑', a:'라이온 킹'},
+  {q:'🕷️🦸', a:'스파이더맨'}, {q:'❄️👸⛄', a:'겨울왕국'},
+  {q:'🐠🔍', a:'니모를 찾아서'}, {q:'🧙⚡👓', a:'해리 포터'},
+  {q:'🦖🏝️', a:'쥬라기 공원'}, {q:'🐼🥋', a:'쿵푸 팬더'},
+  {q:'🤖🌱❤️', a:'월-E'}, {q:'🏠🎈👴', a:'업 (UP)'},
+];
 let quiz = null;
-function startQuiz(){
-  const qs = [];
-  const used = new Set();
-  while(qs.length < 10){
-    const e = QUIZ_POOL[Math.floor(Math.random()*QUIZ_POOL.length)];
-    if(used.has(e.c)) continue;
-    used.add(e.c); qs.push(e);
+const shuffled = arr => [...arr].sort(() => Math.random()-.5);
+function startQuiz(mode){
+  const N = 10;
+  let qs;
+  if(mode === 'riddle') qs = shuffled(RIDDLES).slice(0, 8);
+  else {
+    qs = []; const used = new Set();
+    while(qs.length < N){
+      const e = QUIZ_POOL[Math.floor(Math.random()*QUIZ_POOL.length)];
+      if(used.has(e.c)) continue;
+      used.add(e.c); qs.push(e);
+    }
   }
-  quiz = { i: 0, score: 0, qs };
+  quiz = { mode, i: 0, score: 0, qs };
+  $('#quizTitle').textContent = mode === 'riddle' ? '🧩 이모지 수수께끼' : '🎯 이름 퀴즈';
+  $('#quizDesc').textContent = mode === 'riddle' ? '이모지가 뜻하는 속담·영화를 맞혀 보세요!' : '이름을 보고 맞는 이모지를 고르세요!';
   renderQuiz();
+  $('#gameModal').classList.remove('open');
   $('#quizModal').classList.add('open');
 }
 function renderQuiz(){
   const body = $('#quizBody');
-  if(quiz.i >= quiz.qs.length){
-    const best = Math.max(store.get('quizBest', 0), quiz.score);
-    store.set('quizBest', best);
-    const msg = quiz.score === 10 ? '🏆 만점! 이모지 마스터!' : quiz.score >= 7 ? '🎉 대단해요!' : quiz.score >= 4 ? '💪 좋아요, 한 번 더?' : '😅 다시 도전해 보세요!';
-    body.innerHTML = `<div class="quiz-end"><div class="score">${quiz.score}/10</div><p>${msg}<br>최고 기록: ${best}/10</p><button id="quizRetry">다시 하기</button></div>`;
-    $('#quizRetry').onclick = startQuiz;
-    if(quiz.score >= 7) for(let i=0;i<3;i++) setTimeout(() => burst(['🎉','✨','🏆'][i%3]), i*180);
+  const n = quiz.qs.length;
+  if(quiz.i >= n){
+    const key = quiz.mode === 'riddle' ? 'riddleBest' : 'quizBest';
+    const best = Math.max(store.get(key, 0), quiz.score);
+    store.set(key, best);
+    const r = quiz.score / n;
+    const msg = r === 1 ? '🏆 만점! 이모지 마스터!' : r >= .7 ? '🎉 대단해요!' : r >= .4 ? '💪 좋아요, 한 번 더?' : '😅 다시 도전해 보세요!';
+    body.innerHTML = `<div class="quiz-end"><div class="score">${quiz.score}/${n}</div><p>${msg}<br>최고 기록: ${best}/${n}</p><button id="quizRetry">다시 하기</button></div>`;
+    $('#quizRetry').onclick = () => startQuiz(quiz.mode);
+    if(r >= .7) for(let i=0;i<3;i++) setTimeout(() => burst(['🎉','✨','🏆'][i%3]), i*180);
     return;
   }
-  const answer = quiz.qs[quiz.i];
-  const opts = [answer];
-  while(opts.length < 4){
-    const e = QUIZ_POOL[Math.floor(Math.random()*QUIZ_POOL.length)];
-    if(!opts.some(o => o.c === e.c)) opts.push(e);
+  const cur = quiz.qs[quiz.i];
+  let opts, correctIdx, qHTML, hint = '';
+  if(quiz.mode === 'riddle'){
+    const others = shuffled(RIDDLES.filter(x => x !== cur)).slice(0, 3).map(x => x.a);
+    opts = shuffled([cur.a, ...others]);
+    correctIdx = opts.indexOf(cur.a);
+    qHTML = `<div class="quiz-q riddle">${cur.q}</div>`;
+  } else {
+    const es = [cur];
+    while(es.length < 4){
+      const e = QUIZ_POOL[Math.floor(Math.random()*QUIZ_POOL.length)];
+      if(!es.some(o => o.c === e.c)) es.push(e);
+    }
+    const sh = shuffled(es);
+    opts = sh.map(o => o.c);
+    correctIdx = sh.indexOf(cur);
+    qHTML = `<div class="quiz-q">“${cur.k}”</div>`;
+    hint = `<div class="quiz-hint">${cur.n}</div>`;
   }
-  opts.sort(() => Math.random()-.5);
+  const txt = quiz.mode === 'riddle' ? ' class="txt"' : '';
   body.innerHTML = `
-    <div class="quiz-bar"><span>문제 ${quiz.i+1}/10</span><span>점수 ${quiz.score}</span></div>
-    <div class="quiz-q">“${answer.k}”</div>
-    <div class="quiz-hint">${answer.n}</div>
-    <div class="quiz-opts">${opts.map((o,i) => `<button data-i="${i}">${o.c}</button>`).join('')}</div>`;
+    <div class="quiz-bar"><span>문제 ${quiz.i+1}/${n}</span><span>점수 ${quiz.score}</span></div>
+    ${qHTML}${hint}
+    <div class="quiz-opts">${opts.map((o,i) => `<button${txt} data-i="${i}">${o}</button>`).join('')}</div>`;
   body.querySelectorAll('.quiz-opts button').forEach((b, i) => {
     b.onclick = () => {
       body.querySelectorAll('.quiz-opts button').forEach(x => x.onclick = null);
-      if(opts[i] === answer){
-        b.classList.add('correct'); quiz.score++; burst(answer.c);
+      if(i === correctIdx){
+        b.classList.add('correct'); quiz.score++;
+        burst(quiz.mode === 'riddle' ? '🎉' : cur.c);
       } else {
         b.classList.add('wrong');
-        body.querySelectorAll('.quiz-opts button')[opts.indexOf(answer)].classList.add('correct');
+        body.querySelectorAll('.quiz-opts button')[correctIdx].classList.add('correct');
       }
       quiz.i++;
-      setTimeout(renderQuiz, 800);
+      setTimeout(renderQuiz, quiz.mode === 'riddle' ? 1100 : 800);
     };
   });
 }
-$('#quizBtn').onclick = startQuiz;
+
+/* ================= 🃏 짝 맞추기 ================= */
+let mem = null;
+function startMem(){
+  const pool = shuffled(QUIZ_POOL).slice(0, 8).map(e => e.c);
+  const deck = shuffled([...pool, ...pool]);
+  mem = { deck, open: [], matched: new Set(), moves: 0, t0: Date.now(), timer: null, lock: false };
+  const grid = $('#memGrid');
+  grid.innerHTML = deck.map((c, i) => `<button class="mem-card back" data-i="${i}">?</button>`).join('');
+  grid.querySelectorAll('.mem-card').forEach(card => card.onclick = () => memFlip(+card.dataset.i));
+  $('#memMoves').textContent = '이동 0';
+  clearInterval(mem.timer);
+  mem.timer = setInterval(() => {
+    if(!$('#memModal').classList.contains('open')){ clearInterval(mem.timer); return; }
+    $('#memTime').textContent = `⏱ ${((Date.now()-mem.t0)/1000).toFixed(0)}s`;
+  }, 500);
+  $('#memTime').textContent = '⏱ 0s';
+  $('#gameModal').classList.remove('open');
+  $('#memModal').classList.add('open');
+}
+function memFlip(i){
+  if(mem.lock || mem.matched.has(i) || mem.open.includes(i)) return;
+  const cards = $('#memGrid').children;
+  cards[i].classList.remove('back'); cards[i].textContent = mem.deck[i];
+  mem.open.push(i);
+  if(mem.open.length < 2) return;
+  mem.moves++; $('#memMoves').textContent = `이동 ${mem.moves}`;
+  const [a, b] = mem.open;
+  if(mem.deck[a] === mem.deck[b]){
+    mem.matched.add(a); mem.matched.add(b);
+    cards[a].classList.add('matched'); cards[b].classList.add('matched');
+    burst(mem.deck[a]);
+    mem.open = [];
+    if(mem.matched.size === mem.deck.length){
+      clearInterval(mem.timer);
+      const sec = Math.round((Date.now()-mem.t0)/1000);
+      const prev = store.get('memBest', null);
+      const best = prev === null ? sec : Math.min(prev, sec);
+      store.set('memBest', best);
+      setTimeout(() => {
+        toast(`🏆 완료! ${sec}초 · ${mem.moves}회 (최고 ${best}초)`);
+        for(let i=0;i<3;i++) setTimeout(() => burst('🎉'), i*150);
+      }, 300);
+    }
+  } else {
+    mem.lock = true;
+    setTimeout(() => {
+      cards[a].classList.add('back'); cards[a].textContent = '?';
+      cards[b].classList.add('back'); cards[b].textContent = '?';
+      mem.open = []; mem.lock = false;
+    }, 750);
+  }
+}
+
+/* ================= 🔍 지도에서 찾기 ================= */
+const HUNT_POOL = ALL.filter(e => e.k && e.group !== 'Flags' && e.group !== 'Symbols');
+var hunt = null; // var: 스크립트 평가 순서상 앞선 함수들이 참조해도 TDZ가 없도록
+function startHunt(){
+  $('#gameModal').classList.remove('open');
+  closePanel();
+  if(!document.body.classList.contains('mapmode')) setMapMode(true);
+  hunt = { round: 1, rounds: 5, penalty: 0, t0: Date.now(), timer: null };
+  nextHuntTarget();
+  $('#huntBar').classList.add('show');
+  hunt.timer = setInterval(updateHuntInfo, 100);
+  const r = cv.getBoundingClientRect();
+  const k = Math.min(r.width/WORLD_W, r.height/WORLD_H)*.97;
+  animateView({ k, x: (r.width-WORLD_W*k)/2, y: (r.height-WORLD_H*k)/2 });
+}
+function nextHuntTarget(){
+  hunt.target = HUNT_POOL[Math.floor(Math.random()*HUNT_POOL.length)];
+  $('#huntTarget').innerHTML = `<span class="tg">${hunt.target.c}</span> ${hunt.target.k} 찾기!`;
+}
+function updateHuntInfo(){
+  if(!hunt) return;
+  const t = (Date.now()-hunt.t0)/1000 + hunt.penalty;
+  $('#huntInfo').textContent = `${hunt.round}/${hunt.rounds} · ⏱ ${t.toFixed(1)}s`;
+}
+function huntPick(cell){
+  if(cell.e === hunt.target){
+    burst(cell.e.c); toast(`✅ ${cell.e.k} 발견!`);
+    if(hunt.round >= hunt.rounds){
+      const total = Math.round(((Date.now()-hunt.t0)/1000 + hunt.penalty)*10)/10;
+      const prev = store.get('huntBest', null);
+      const best = prev === null ? total : Math.min(prev, total);
+      store.set('huntBest', best);
+      endHunt();
+      setTimeout(() => {
+        toast(`🏆 5마리 모두 발견! ${total}초 (최고 ${best}초)`);
+        for(let i=0;i<4;i++) setTimeout(() => burst('🎉'), i*150);
+      }, 200);
+    } else {
+      hunt.round++;
+      nextHuntTarget();
+    }
+  } else {
+    hunt.penalty += 2;
+    const bar = $('#huntBar');
+    bar.classList.remove('wrong'); void bar.offsetWidth; bar.classList.add('wrong');
+    toast(`❌ 그건 ${cell.e.k || cell.e.n}! +2초`);
+  }
+}
+function endHunt(){
+  if(hunt && hunt.timer) clearInterval(hunt.timer);
+  hunt = null;
+  $('#huntBar').classList.remove('show');
+}
+$('#huntQuit').onclick = endHunt;
+$('#huntHint').onclick = () => {
+  if(!hunt) return;
+  hunt.penalty += 3;
+  mapFlyTo(hunt.target.group);
+  toast(`💡 ${CAT[hunt.target.group][1]} 지역이에요! +3초`);
+};
+
+/* ================= 게임 허브 ================= */
+function fmtBest(v, unit){ return v === null || v === undefined ? '—' : v + unit; }
+$('#gameBtn').onclick = () => {
+  $('#bestName').textContent = '최고 ' + fmtBest(store.get('quizBest', null), '/10');
+  $('#bestRiddle').textContent = '최고 ' + fmtBest(store.get('riddleBest', null), '/8');
+  $('#bestHunt').textContent = '최고 ' + fmtBest(store.get('huntBest', null), '초');
+  $('#bestMem').textContent = '최고 ' + fmtBest(store.get('memBest', null), '초');
+  $('#gameModal').classList.add('open');
+};
+document.querySelectorAll('.game-cards button').forEach(b => {
+  b.onclick = () => ({ name: () => startQuiz('name'), riddle: () => startQuiz('riddle'), hunt: startHunt, mem: startMem })[b.dataset.game]();
+});
+
+/* ================= 🔮 키워드 기반 추천 시스템 ================= */
+var kwIndex = null; // token -> [emoji index...] (var: 초기 renderPins가 참조해도 안전)
+var emoTokens = null;
+function buildKwIndex(){
+  kwIndex = new Map(); emoTokens = [];
+  ALL.forEach((e, i) => {
+    const toks = [...new Set(e.search.split(/\s+/).filter(t => t.length >= 2))];
+    emoTokens.push(toks);
+    toks.forEach(t => {
+      let arr = kwIndex.get(t);
+      if(!arr) kwIndex.set(t, arr = []);
+      arr.push(i);
+    });
+  });
+  renderForYou();
+  if(panelEmoji) renderPanelRecs(panelEmoji);
+}
+function relatedTo(e, n){
+  if(!kwIndex) return [];
+  const i0 = ALL.indexOf(e);
+  const score = new Map();
+  emoTokens[i0].forEach(t => {
+    const post = kwIndex.get(t);
+    if(!post || post.length > 120) return; // 너무 흔한 토큰은 변별력 없음
+    const w = 1/post.length;
+    post.forEach(j => { if(j !== i0) score.set(j, (score.get(j) || 0) + w); });
+  });
+  return [...score.entries()].sort((a,b) => b[1]-a[1]).slice(0, n).map(([j]) => ALL[j]);
+}
+function renderPanelRecs(e){
+  const wrap = $('#pRecWrap'), row = $('#pRec');
+  const recs = relatedTo(e, 12).filter(x => x.sub !== e.sub).slice(0, 10);
+  if(!recs.length){ wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  row.innerHTML = '';
+  recs.forEach(x => {
+    const b = document.createElement('button');
+    b.textContent = applyTone(x); b.title = x.k || x.n;
+    b.onclick = () => { copyEmoji(applyTone(x), x); openPanel(x); };
+    row.appendChild(b);
+  });
+}
+function renderForYou(){
+  if(!kwIndex) return;
+  const recent = store.get('recent', []), favs = store.get('fav', []);
+  const seeds = [...new Set([...recent.slice(0, 10), ...favs])].map(c => byChar.get(c)).filter(Boolean);
+  const row = $('#rowForYou');
+  if(seeds.length < 3){ row.classList.add('hidden'); return; }
+  const exclude = new Set(seeds.map(e => e.c));
+  const score = new Map();
+  seeds.forEach((e, si) => {
+    const w = favs.includes(e.c) ? 1.3 : 1 - si*0.05; // 즐겨찾기·최근 순서 가중
+    relatedTo(e, 15).forEach((x, ri) => {
+      if(exclude.has(x.c)) return;
+      score.set(x.c, (score.get(x.c) || 0) + w * (15-ri));
+    });
+  });
+  const top = [...score.entries()].sort((a,b) => b[1]-a[1]).slice(0, 14).map(([c]) => byChar.get(c));
+  if(!top.length){ row.classList.add('hidden'); return; }
+  row.classList.remove('hidden');
+  const wrap = row.querySelector('.pemo');
+  wrap.innerHTML = '';
+  top.forEach(e => {
+    const b = document.createElement('button');
+    b.textContent = applyTone(e); b.title = `${e.k || e.n} — 최근 사용 기록 기반 추천`;
+    b.onclick = () => { copyEmoji(applyTone(e), e); openPanel(e); };
+    wrap.appendChild(b);
+  });
+}
+addEventListener('emoji-kw-ready', () => setTimeout(buildKwIndex, 300), { once: true });
 
 /* modal close */
 document.querySelectorAll('.mclose').forEach(b => b.onclick = () => $('#'+b.dataset.close).classList.remove('open'));
