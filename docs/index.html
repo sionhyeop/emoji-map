@@ -80,13 +80,17 @@ main{max-width:1200px;margin:0 auto;padding:16px}
 .e.has-skin::after{content:"";position:absolute;right:5px;bottom:5px;width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.65}
 .hidden{display:none!important}
 .no-result{text-align:center;color:var(--sub);padding:60px 0;font-size:15px}
+.result-info{font-size:12.5px;font-weight:600;color:var(--sub);padding:4px 2px}
+body.mapmode #noResult{display:none}
+.e:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent-soft)}
 
 /* detail panel */
 .panel{position:fixed;right:16px;bottom:16px;width:340px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px;z-index:60;display:none}
 .panel.open{display:block}
-.panel .close{position:absolute;top:10px;right:12px;font-size:18px;color:var(--sub);padding:4px 8px;border-radius:8px}
+.panel .close{position:absolute;top:10px;right:12px;font-size:18px;color:var(--sub);padding:4px 8px;border-radius:8px;z-index:2}
 .panel .close:hover{background:var(--chip)}
-.panel .big{font-size:56px;line-height:1.1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.panel .big{font-size:56px;line-height:1.1;cursor:pointer;transition:transform .12s;display:inline-block;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.panel .big:hover{transform:scale(1.12)}
 .panel .names{margin:6px 0 2px}
 .panel .kname{font-size:16px;font-weight:800}
 .panel .ename{font-size:13px;color:var(--sub)}
@@ -141,6 +145,11 @@ body.mapmode #mapview{height:calc(100vh - 210px)}
 .mix-slots{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0 16px}
 .mix-slot{width:74px;height:74px;border:2px dashed var(--line);border-radius:18px;font-size:40px;display:flex;align-items:center;justify-content:center;background:var(--chip);transition:border-color .15s;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 .mix-slot.filled{border-style:solid;border-color:var(--accent)}
+.mix-slot.next{animation:slotpulse 1.2s ease-in-out infinite}
+@keyframes slotpulse{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 30%,transparent)}}
+.mix-sug{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.mix-sug button{font-size:24px;padding:3px;border-radius:8px}
+.mix-sug button:hover{background:var(--chip)}
 .mix-plus{font-size:22px;color:var(--sub);font-weight:700}
 .mix-result{display:flex;flex-direction:column;align-items:center;gap:8px;min-height:150px;justify-content:center}
 .mix-result img{width:128px;height:128px;image-rendering:auto}
@@ -164,6 +173,7 @@ body.mapmode #mapview{height:calc(100vh - 210px)}
 .quiz-end .score{font-size:42px;font-weight:800}
 .quiz-end p{color:var(--sub);font-size:14px;margin:6px 0 16px}
 .quiz-end button{font-size:14px;font-weight:700;padding:10px 18px;border-radius:12px;background:var(--accent);color:#fff}
+.updbar{position:fixed;left:16px;bottom:16px;z-index:90;background:var(--accent);color:#fff;font-size:13.5px;font-weight:700;padding:10px 16px;border-radius:999px;box-shadow:var(--shadow)}
 /* particles */
 .particle{position:fixed;pointer-events:none;z-index:200;font-size:22px;left:0;top:0;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 footer{max-width:1200px;margin:30px auto 0;padding:20px 16px 40px;color:var(--sub);font-size:12.5px;border-top:1px solid var(--line)}
@@ -189,7 +199,7 @@ footer a{color:var(--accent)}
     <button class="hbtn" id="mixBtn" title="이모지 두 개를 합성">🧪 믹서</button>
     <button class="hbtn" id="quizBtn" title="이모지 맞히기 게임">🎯 퀴즈</button>
     <button class="hbtn" id="randomBtn" title="랜덤 이모지">🎲 랜덤</button>
-    <button class="hbtn" id="themeBtn" title="테마 전환">🌙</button>
+    <button class="hbtn" id="themeBtn" title="테마 전환" aria-label="다크/라이트 테마 전환">🌙</button>
   </div>
 </header>
 
@@ -213,6 +223,7 @@ footer a{color:var(--accent)}
       <button class="pclear" data-clear="fav">지우기</button>
     </div>
   </div>
+  <div class="result-info hidden" id="resultInfo"></div>
   <div id="mapview">
     <canvas id="mapCanvas"></canvas>
     <div class="zoomctl">
@@ -228,7 +239,7 @@ footer a{color:var(--accent)}
 </main>
 
 <aside class="panel" id="panel">
-  <button class="close" id="panelClose">✕</button>
+  <button class="close" id="panelClose" aria-label="패널 닫기">✕</button>
   <div class="big" id="pBig"></div>
   <div class="names"><div class="kname" id="pKo"></div><div class="ename" id="pEn"></div></div>
   <div class="meta" id="pMeta"></div>
@@ -236,8 +247,8 @@ footer a{color:var(--accent)}
     <button class="primary" id="pCopy">복사</button>
     <button id="pFav">☆ 즐겨찾기</button>
     <button id="pCombo">➕ 조합에 추가</button>
-    <button id="pShare" title="이 이모지 링크 복사">🔗</button>
-    <button id="pMix" title="믹서로 보내기">🧪</button>
+    <button id="pShare" title="이 이모지 링크 복사/공유">🔗 링크</button>
+    <button id="pMix" title="믹서로 보내 다른 이모지와 합성">🧪 믹서</button>
   </div>
   <div id="pVariWrap"><h4>스킨톤 변형</h4><div class="vari" id="pVari"></div></div>
   <div><h4>비슷한 이모지</h4><div class="rel" id="pRel"></div></div>
@@ -264,7 +275,8 @@ footer a{color:var(--accent)}
     </div>
     <div class="mix-result" id="mixResult"><div class="mixmsg">아래에서 이모지를 두 개 선택해 보세요</div></div>
     <div class="mix-acts hidden" id="mixActs">
-      <button class="primary" id="mixDownload">이미지 저장</button>
+      <button class="primary" id="mixCopyImg" title="채팅에 붙여넣을 수 있게 이미지를 복사">📋 이미지 복사</button>
+      <button id="mixDownload">💾 저장</button>
       <button id="mixShuffle">🎲 랜덤 조합</button>
     </div>
     <div class="mix-quick" id="mixQuick"></div>
@@ -291,7 +303,7 @@ const DATA = window.EMOJI_DATA;
 const $ = s => document.querySelector(s);
 const store = {
   get(k, d){ try{ return JSON.parse(localStorage.getItem('em_'+k)) ?? d }catch{ return d } },
-  set(k, v){ localStorage.setItem('em_'+k, JSON.stringify(v)) }
+  set(k, v){ try{ localStorage.setItem('em_'+k, JSON.stringify(v)) }catch{} }
 };
 
 /* ---------- category meta (Korean labels + icons) ---------- */
@@ -404,6 +416,34 @@ mapEl.addEventListener('click', ev => {
   copyEmoji(applyTone(e), e);
   openPanel(e);
 });
+/* 우클릭(모바일 롱프레스) = 즐겨찾기 토글 */
+function toggleFav(e){
+  let f = store.get('fav', []);
+  const on = !f.includes(e.c);
+  f = on ? [...f, e.c] : f.filter(c => c !== e.c);
+  store.set('fav', f); renderPins();
+  toast(on ? `⭐ ${applyTone(e)} 즐겨찾기 추가` : `${applyTone(e)} 즐겨찾기 해제`);
+  if(panelEmoji === e) openPanel(e);
+  return on;
+}
+mapEl.addEventListener('contextmenu', ev => {
+  const b = ev.target.closest('.e'); if(!b) return;
+  ev.preventDefault();
+  toggleFav(byChar.get(b.dataset.c));
+});
+/* 방향키로 그리드 탐색, Enter/Space는 버튼 기본 동작(복사) */
+mapEl.addEventListener('keydown', ev => {
+  const b = ev.target;
+  if(!b.classList || !b.classList.contains('e')) return;
+  if(!['ArrowRight','ArrowLeft','ArrowUp','ArrowDown'].includes(ev.key)) return;
+  ev.preventDefault();
+  const vis = [...mapEl.querySelectorAll('.e:not(.hidden)')];
+  const i = vis.indexOf(b);
+  if(i < 0) return;
+  const cols = Math.max(1, Math.floor(b.closest('.egrid').clientWidth / (b.offsetWidth + 2)));
+  const ni = { ArrowRight: i+1, ArrowLeft: i-1, ArrowDown: i+cols, ArrowUp: i-cols }[ev.key];
+  vis[Math.max(0, Math.min(vis.length-1, ni))]?.focus();
+});
 
 function copyText(t){
   return navigator.clipboard.writeText(t).catch(() => {
@@ -456,14 +496,15 @@ function openPanel(e){
   });
   $('#panel').classList.add('open');
 }
-$('#panelClose').onclick = () => $('#panel').classList.remove('open');
+function closePanel(){
+  $('#panel').classList.remove('open');
+  if(location.hash) history.replaceState(null, '', location.pathname + location.search);
+}
+$('#panelClose').onclick = closePanel;
 $('#pCopy').onclick = () => panelEmoji && copyEmoji(applyTone(panelEmoji), panelEmoji);
-$('#pFav').onclick = () => {
-  if(!panelEmoji) return;
-  let f = store.get('fav', []);
-  f = f.includes(panelEmoji.c) ? f.filter(c=>c!==panelEmoji.c) : [...f, panelEmoji.c];
-  store.set('fav', f); renderPins(); openPanel(panelEmoji);
-};
+$('#pBig').title = '클릭하면 복사돼요';
+$('#pBig').onclick = () => panelEmoji && copyEmoji(applyTone(panelEmoji), panelEmoji);
+$('#pFav').onclick = () => panelEmoji && toggleFav(panelEmoji);
 $('#pCombo').onclick = () => { if(panelEmoji){ combo.push(applyTone(panelEmoji)); renderCombo(); toast('조합에 추가!'); } };
 
 /* ---------- recent / fav rows ---------- */
@@ -527,28 +568,35 @@ function applyFilter(pred){
   currentPred = pred;
   if(window.mapDraw) mapDraw();
   if(window.magInvalidate) magInvalidate();
-  let any = false;
+  let any = false, total = 0;
   mapEl.querySelectorAll('.egrid').forEach(grid => {
     let vis = 0;
     grid.querySelectorAll('.e').forEach(b => {
       const ok = !pred || pred(byChar.get(b.dataset.c));
       b.classList.toggle('hidden', !ok); if(ok) vis++;
+      if(b.style.transform){ b.style.transform = ''; b.style.zIndex = ''; }
     });
     grid.parentElement.classList.toggle('hidden', vis === 0);
-    if(vis) any = true;
+    if(vis){ any = true; total += vis; }
   });
   mapEl.querySelectorAll('.group').forEach(sec => {
     const vis = [...sec.querySelectorAll('.sub')].some(s => !s.classList.contains('hidden'));
     sec.classList.toggle('hidden', !vis);
   });
   $('#noResult').classList.toggle('hidden', any);
+  // 필터가 걸리면 결과가 보이도록 위로 — 이미 상단이면 그대로
+  if(pred && !document.body.classList.contains('mapmode') && scrollY > 250) scrollTo({top: 0, behavior: 'instant'});
+  const info = $('#resultInfo');
+  info.classList.toggle('hidden', !pred || !any);
+  if(pred && any) info.textContent = `🔍 ${total}개 결과 — ESC 키로 초기화`;
 }
 document.addEventListener('keydown', e => {
   if(e.key === '/' && document.activeElement !== qEl){ e.preventDefault(); qEl.focus(); }
   if(e.key === 'Escape'){
     document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
-    $('#panel').classList.remove('open');
+    closePanel();
     if(qEl.value){ qEl.value=''; clearFilter(); }
+    if(activeMood !== null){ activeMood = null; [...moodsEl.children].forEach(x=>x.classList.remove('on')); clearFilter(); }
   }
 });
 
@@ -556,8 +604,17 @@ document.addEventListener('keydown', e => {
 $('#randomBtn').onclick = () => {
   const e = ALL[Math.floor(Math.random() * ALL.length)];
   copyEmoji(applyTone(e), e); openPanel(e);
-  const btn = mapEl.querySelector(`.e[data-c="${CSS.escape(e.c)}"]`);
-  if(btn && !btn.classList.contains('hidden')) btn.scrollIntoView({block:'center'});
+  if(document.body.classList.contains('mapmode')){
+    // 지도에서는 해당 이모지 위치로 날아가기
+    const c = cells.find(cc => cc.e === e);
+    if(c && window.mapDraw){
+      const r = cv.getBoundingClientRect(), k = Math.max(view.k, 1.6);
+      animateView({ k, x: r.width/2 - c.x*k, y: r.height/2 - c.y*k });
+    }
+  } else {
+    const btn = mapEl.querySelector(`.e[data-c="${CSS.escape(e.c)}"]`);
+    if(btn && !btn.classList.contains('hidden')) btn.scrollIntoView({block:'center'});
+  }
 };
 
 /* ---------- theme ---------- */
@@ -680,10 +737,11 @@ const territories = [], cells = [];
     rows = Math.ceil(n/cols);
     const cell = Math.min(iw/cols, ih/rows);
     const ox = ix + (iw - cell*cols)/2, oy = iy + (ih - cell*rows)/2;
-    const t = { g: g.name, rect, cell, cols, ox, oy, list };
+    const t = { g: g.name, rect, cell, cols, ox, oy, list, cells: [] };
     territories.push(t);
     list.forEach((e, i) => {
-      cells.push({ e, t, x: ox + (i%cols)*cell + cell/2, y: oy + Math.floor(i/cols)*cell + cell/2, s: cell });
+      const c = { e, t, x: ox + (i%cols)*cell + cell/2, y: oy + Math.floor(i/cols)*cell + cell/2, s: cell };
+      t.cells.push(c); cells.push(c);
     });
   });
 })();
@@ -754,18 +812,35 @@ function roundRect(x,y,w,h,r){
   mctx.arcTo(x,y+h,x,y,r); mctx.arcTo(x,y,x+w,y,r); mctx.closePath();
 }
 
-/* pan / zoom / pick */
-let drag = null, moved = false;
+/* pan / zoom / pick — 멀티터치 핀치 줌 지원 */
+let drag = null, moved = false, lastPinch = null;
+const activePtrs = new Map();
 cv.addEventListener('pointerdown', e => {
-  drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }; moved = false;
-  cv.setPointerCapture(e.pointerId); cv.classList.add('grabbing');
+  activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  cv.setPointerCapture(e.pointerId);
+  if(activePtrs.size === 1){
+    drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }; moved = false;
+    cv.classList.add('grabbing');
+  } else {
+    drag = null; lastPinch = null; moved = true; tip.style.opacity = 0;
+  }
 });
 cv.addEventListener('pointermove', e => {
+  if(activePtrs.has(e.pointerId)) activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if(activePtrs.size === 2){
+    const [p1, p2] = [...activePtrs.values()];
+    const dist = Math.hypot(p1.x-p2.x, p1.y-p2.y);
+    const rect = cv.getBoundingClientRect();
+    const mid = { x: (p1.x+p2.x)/2 - rect.left, y: (p1.y+p2.y)/2 - rect.top };
+    if(lastPinch) zoomAt(mid.x, mid.y, dist / lastPinch);
+    lastPinch = dist;
+    return;
+  }
   if(drag){
     const dx = e.clientX-drag.x, dy = e.clientY-drag.y;
     if(Math.hypot(dx,dy) > 4) moved = true;
     if(moved){ view.x = drag.vx+dx; view.y = drag.vy+dy; mapDraw(); tip.style.opacity = 0; }
-  } else {
+  } else if(e.pointerType === 'mouse'){
     const c = pick(e);
     if(c){
       tip.style.opacity = 1;
@@ -776,14 +851,23 @@ cv.addEventListener('pointermove', e => {
     } else { tip.style.opacity = 0; cv.style.cursor = 'grab'; }
   }
 });
-cv.addEventListener('pointerup', e => {
+function endPtr(e){
+  activePtrs.delete(e.pointerId);
+  if(activePtrs.size < 2) lastPinch = null;
   cv.classList.remove('grabbing');
-  if(drag && !moved){
+  if(e.type === 'pointerup' && drag && !moved){
     const c = pick(e);
     if(c){ copyEmoji(applyTone(c.e), c.e); openPanel(c.e); }
+    else {
+      // 이모지가 안 보이는 배율이면 클릭 지점으로 확대 (지도 앱과 동일한 직관)
+      const rect = cv.getBoundingClientRect();
+      if(view.k * cells[0].s <= 14) zoomAt(e.clientX-rect.left, e.clientY-rect.top, 2.2);
+    }
   }
   drag = null;
-});
+}
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
 cv.addEventListener('pointerleave', () => { tip.style.opacity = 0; });
 cv.addEventListener('wheel', e => {
   e.preventDefault();
@@ -804,16 +888,17 @@ function zoomAt(mx, my, f){
 function pick(e){
   const rect = cv.getBoundingClientRect();
   const wx = (e.clientX-rect.left-view.x)/view.k, wy = (e.clientY-rect.top-view.y)/view.k;
-  if(view.k*cells[0].s <= 7) return null;
+  // 글리프가 조준 불가능하게 작으면 픽킹 대신 클릭-줌이 동작하도록
+  if(view.k*cells[0].s <= 13) return null;
   for(const t of territories){
     const {x,y,w,h} = t.rect;
     if(wx < x || wx > x+w || wy < y || wy > y+h) continue;
     const col = Math.floor((wx-t.ox)/t.cell), row = Math.floor((wy-t.oy)/t.cell);
     if(col < 0 || col >= t.cols || row < 0) return null;
     const i = row*t.cols+col;
-    if(i >= t.list.length) return null;
-    const c = cells.find(cc => cc.e === t.list[i]);
-    if(c && currentPred && !currentPred(c.e)) return null;
+    if(i >= t.cells.length) return null;
+    const c = t.cells[i];
+    if(currentPred && !currentPred(c.e)) return null;
     return c;
   }
   return null;
@@ -958,19 +1043,48 @@ function renderMixSlots(){
   const sa = $('#slotA'), sb = $('#slotB');
   sa.textContent = mixA || '＋'; sb.textContent = mixB || '＋';
   sa.classList.toggle('filled', !!mixA); sb.classList.toggle('filled', !!mixB);
+  sa.classList.toggle('next', mixSlotTurn === 0);
+  sb.classList.toggle('next', mixSlotTurn === 1);
+}
+function mixPartners(ch, n){
+  // ch와 실제로 섞이는 이모지들 중 무작위 n개
+  const a = kitchenIdx.get(cpOf(ch));
+  if(a === undefined) return [];
+  const out = [];
+  for(let b = 0; b < KITCHEN.cps.length; b++){
+    if(b === a) continue;
+    const [i, j] = a <= b ? [a, b] : [b, a];
+    if(kitchenTri[j*(j+1)/2 + i]) out.push(KITCHEN.chars[b]);
+  }
+  for(let i = out.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [out[i], out[j]] = [out[j], out[i]]; }
+  return out.slice(0, n);
 }
 function tryMix(){
   const R = $('#mixResult'), acts = $('#mixActs');
   mixCurrentURL = null; acts.classList.add('hidden');
-  if(!mixA || !mixB){ R.innerHTML = '<div class="mixmsg">이모지를 두 개 선택해 보세요 👇</div>'; return; }
+  if(!mixA || !mixB){
+    const base = mixA || mixB;
+    if(base){
+      // 하나만 고른 상태 — 잘 섞이는 짝 미리 추천
+      const sug = mixPartners(base, 8);
+      R.innerHTML = `<div class="mixmsg">${base}와 잘 섞이는 이모지 👇 눌러서 바로 합성</div>
+        <div class="mix-sug">${sug.map(s => `<button data-s="${s}">${s}</button>`).join('')}</div>`;
+      R.querySelectorAll('.mix-sug button').forEach(b => b.onclick = () => setMixEmoji(b.dataset.s));
+    } else R.innerHTML = '<div class="mixmsg">이모지를 두 개 선택해 보세요 👇</div>';
+    return;
+  }
   const url = kitchenURL(mixA, mixB);
   acts.classList.remove('hidden');
   if(url){
     mixCurrentURL = url;
-    R.innerHTML = `<img src="${url}" alt="${mixA}+${mixB}"><div class="mixmsg">${mixA} ✕ ${mixB}</div>`;
+    R.innerHTML = `<img src="${url}" alt="${mixA}+${mixB}" title="클릭하면 이미지 복사" style="cursor:pointer"><div class="mixmsg">${mixA} ✕ ${mixB} — 이미지를 클릭하면 복사돼요</div>`;
+    R.querySelector('img').onclick = copyMixImage;
     burst(mixA); burst(mixB);
   } else {
-    R.innerHTML = `<div class="mixmsg">😢 이 조합은 없어요. 🎲 랜덤으로 돌려보세요!</div>`;
+    const sug = mixPartners(mixA, 8);
+    R.innerHTML = `<div class="mixmsg">😢 이 조합은 없어요. ${mixA}와는 이런 조합이 돼요:</div>
+      <div class="mix-sug">${sug.map(s => `<button data-s="${s}">${s}</button>`).join('')}</div>`;
+    R.querySelectorAll('.mix-sug button').forEach(b => b.onclick = () => { mixB = b.dataset.s; mixSlotTurn = 0; renderMixSlots(); tryMix(); });
   }
 }
 function setMixEmoji(ch){
@@ -978,8 +1092,29 @@ function setMixEmoji(ch){
   else { mixB = ch; mixSlotTurn = 0; }
   renderMixSlots(); tryMix();
 }
-$('#slotA').onclick = () => { mixSlotTurn = 0; toast('아래에서 이모지를 고르세요'); };
-$('#slotB').onclick = () => { mixSlotTurn = 1; toast('아래에서 이모지를 고르세요'); };
+/* 채워진 슬롯 클릭 = 비우기, 빈 슬롯 클릭 = 다음 선택 대상 지정 */
+$('#slotA').onclick = () => {
+  if(mixA){ mixA = null; mixSlotTurn = 0; }
+  else { mixSlotTurn = 0; toast('아래에서 이모지를 고르세요'); }
+  renderMixSlots(); tryMix();
+};
+$('#slotB').onclick = () => {
+  if(mixB){ mixB = null; mixSlotTurn = 1; }
+  else { mixSlotTurn = 1; toast('아래에서 이모지를 고르세요'); }
+  renderMixSlots(); tryMix();
+};
+async function copyMixImage(){
+  if(!mixCurrentURL) return;
+  try {
+    const blob = await fetch(mixCurrentURL).then(r => r.blob());
+    // 일부 브라우저는 image/png만 허용
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type || 'image/png']: blob })]);
+    toast('📋 이미지 복사됨! 채팅에 붙여넣어 보세요');
+  } catch {
+    toast('이미지 복사가 안 되는 브라우저예요 — 💾 저장을 이용하세요');
+  }
+}
+$('#mixCopyImg').onclick = copyMixImage;
 $('#mixShuffle').onclick = () => {
   // 반드시 존재하는 조합이 나올 때까지 시도 (인덱스 조회라 즉시)
   for(let t=0;t<200;t++){
@@ -1060,9 +1195,22 @@ $('#quizBtn').onclick = startQuiz;
 document.querySelectorAll('.mclose').forEach(b => b.onclick = () => $('#'+b.dataset.close).classList.remove('open'));
 document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if(e.target === m) m.classList.remove('open'); }));
 
-/* ================= PWA: service worker ================= */
+/* ================= PWA: service worker + 업데이트 알림 ================= */
 if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
-  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').then(reg => {
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      w && w.addEventListener('statechange', () => {
+        if(w.state === 'installed' && navigator.serviceWorker.controller){
+          const bar = document.createElement('button');
+          bar.className = 'updbar';
+          bar.textContent = '✨ 새 버전이 나왔어요 — 눌러서 새로고침';
+          bar.onclick = () => location.reload();
+          document.body.appendChild(bar);
+        }
+      });
+    });
+  }).catch(()=>{}));
 }
 
 /* ---------- active category on scroll ---------- */

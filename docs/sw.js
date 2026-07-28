@@ -1,4 +1,4 @@
-const CACHE = 'emojimap-v1';
+const CACHE = 'emojimap-v2';
 const ASSETS = ['./', './index.html', './emoji-data.js', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {
