@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Emoji Map — 한눈에 보는 이모지 지도</title>
 <meta name="description" content="광고 없이 한 페이지에서 모든 이모지를 탐색·검색·복사하세요. 무드 추천, 스킨톤, 즐겨찾기, 조합 기능까지.">
+<link rel="preload" href="emoji-data.js" as="script">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#6366f1">
 <style>
 :root{
   --bg:#fafafa; --panel:#ffffff; --text:#1a1a1a; --sub:#6b7280; --line:#e5e7eb;
@@ -120,6 +124,46 @@ body.mapmode #mapview{height:calc(100vh - 210px)}
 .maphint{position:absolute;left:14px;bottom:12px;font-size:12px;color:var(--sub);background:color-mix(in srgb,var(--panel) 80%,transparent);backdrop-filter:blur(6px);padding:5px 11px;border-radius:999px;pointer-events:none}
 .maptip{position:absolute;pointer-events:none;background:var(--text);color:var(--bg);font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:9px;transform:translate(-50%,-130%);white-space:nowrap;opacity:0;transition:opacity .1s;z-index:6}
 .maptip .tbig{font-size:16px;margin-right:4px}
+/* perf: native lazy rendering of off-screen subgroups */
+.sub{content-visibility:auto;contain-intrinsic-size:auto 260px}
+/* rank badge on popular row */
+.pinrow .pemo .rankwrap{position:relative;flex-shrink:0}
+.rank{position:absolute;top:-2px;left:-1px;font-size:9px;font-weight:800;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:0 4px;pointer-events:none}
+/* modal (quiz / mixer) */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:24px;width:420px;max-width:100%;max-height:90vh;overflow-y:auto;position:relative}
+.modal .mclose{position:absolute;top:12px;right:14px;font-size:18px;color:var(--sub);padding:4px 8px;border-radius:8px}
+.modal .mclose:hover{background:var(--chip)}
+.modal h3{font-size:18px;font-weight:800;margin-bottom:4px}
+.modal .msub{font-size:13px;color:var(--sub);margin-bottom:16px}
+/* mixer */
+.mix-slots{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0 16px}
+.mix-slot{width:74px;height:74px;border:2px dashed var(--line);border-radius:18px;font-size:40px;display:flex;align-items:center;justify-content:center;background:var(--chip);transition:border-color .15s;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.mix-slot.filled{border-style:solid;border-color:var(--accent)}
+.mix-plus{font-size:22px;color:var(--sub);font-weight:700}
+.mix-result{display:flex;flex-direction:column;align-items:center;gap:8px;min-height:150px;justify-content:center}
+.mix-result img{width:128px;height:128px;image-rendering:auto}
+.mix-result .mixmsg{font-size:13.5px;color:var(--sub);text-align:center}
+.mix-quick{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:12px}
+.mix-quick button{font-size:23px;padding:3px 4px;border-radius:8px}
+.mix-quick button:hover{background:var(--chip)}
+.mix-acts{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.mix-acts button{font-size:13px;font-weight:600;padding:8px 14px;border-radius:10px;background:var(--chip)}
+.mix-acts button.primary{background:var(--accent);color:#fff}
+/* quiz */
+.quiz-q{font-size:17px;font-weight:800;text-align:center;margin:14px 0 4px;min-height:26px}
+.quiz-hint{font-size:12.5px;color:var(--sub);text-align:center;margin-bottom:14px}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quiz-opts button{font-size:44px;padding:14px 0;border-radius:16px;background:var(--chip);transition:transform .1s;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.quiz-opts button:hover{transform:scale(1.06);background:var(--accent-soft)}
+.quiz-opts button.correct{background:#16a34a33;outline:2px solid #16a34a}
+.quiz-opts button.wrong{background:#dc262633;outline:2px solid #dc2626}
+.quiz-bar{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--sub);margin-bottom:6px}
+.quiz-end{text-align:center;padding:18px 0}
+.quiz-end .score{font-size:42px;font-weight:800}
+.quiz-end p{color:var(--sub);font-size:14px;margin:6px 0 16px}
+.quiz-end button{font-size:14px;font-weight:700;padding:10px 18px;border-radius:12px;background:var(--accent);color:#fff}
 /* particles */
 .particle{position:fixed;pointer-events:none;z-index:200;font-size:22px;left:0;top:0;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 footer{max-width:1200px;margin:30px auto 0;padding:20px 16px 40px;color:var(--sub);font-size:12.5px;border-top:1px solid var(--line)}
@@ -142,6 +186,8 @@ footer a{color:var(--accent)}
     </div>
     <div class="skin-picker" id="skins" title="스킨톤 선택"></div>
     <button class="hbtn" id="viewBtn" title="지도 뷰 전환">🗺️ 지도뷰</button>
+    <button class="hbtn" id="mixBtn" title="이모지 두 개를 합성">🧪 믹서</button>
+    <button class="hbtn" id="quizBtn" title="이모지 맞히기 게임">🎯 퀴즈</button>
     <button class="hbtn" id="randomBtn" title="랜덤 이모지">🎲 랜덤</button>
     <button class="hbtn" id="themeBtn" title="테마 전환">🌙</button>
   </div>
@@ -152,6 +198,12 @@ footer a{color:var(--accent)}
 <main>
   <div class="moods" id="moods"></div>
   <div class="pinned">
+    <div class="pinrow" id="rowDaily">
+      <span class="plabel">📅 오늘</span><div class="pemo"></div>
+    </div>
+    <div class="pinrow" id="rowTop">
+      <span class="plabel">🔥 인기</span><div class="pemo"></div>
+    </div>
     <div class="pinrow" id="rowRecent">
       <span class="plabel">🕘 최근</span><div class="pemo"></div>
       <button class="pclear" data-clear="recent">지우기</button>
@@ -184,6 +236,8 @@ footer a{color:var(--accent)}
     <button class="primary" id="pCopy">복사</button>
     <button id="pFav">☆ 즐겨찾기</button>
     <button id="pCombo">➕ 조합에 추가</button>
+    <button id="pShare" title="이 이모지 링크 복사">🔗</button>
+    <button id="pMix" title="믹서로 보내기">🧪</button>
   </div>
   <div id="pVariWrap"><h4>스킨톤 변형</h4><div class="vari" id="pVari"></div></div>
   <div><h4>비슷한 이모지</h4><div class="rel" id="pRel"></div></div>
@@ -196,6 +250,36 @@ footer a{color:var(--accent)}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- emoji kitchen mixer -->
+<div class="modal-bg" id="mixModal">
+  <div class="modal">
+    <button class="mclose" data-close="mixModal">✕</button>
+    <h3>🧪 이모지 믹서</h3>
+    <div class="msub">이모지 두 개를 골라 새로운 스티커로 합성해요 (Google Emoji Kitchen)</div>
+    <div class="mix-slots">
+      <button class="mix-slot" id="slotA">＋</button>
+      <span class="mix-plus">✕</span>
+      <button class="mix-slot" id="slotB">＋</button>
+    </div>
+    <div class="mix-result" id="mixResult"><div class="mixmsg">아래에서 이모지를 두 개 선택해 보세요</div></div>
+    <div class="mix-acts hidden" id="mixActs">
+      <button class="primary" id="mixDownload">이미지 저장</button>
+      <button id="mixShuffle">🎲 랜덤 조합</button>
+    </div>
+    <div class="mix-quick" id="mixQuick"></div>
+  </div>
+</div>
+
+<!-- quiz -->
+<div class="modal-bg" id="quizModal">
+  <div class="modal">
+    <button class="mclose" data-close="quizModal">✕</button>
+    <h3>🎯 이모지 퀴즈</h3>
+    <div class="msub">이름을 보고 맞는 이모지를 고르세요! (10문제)</div>
+    <div id="quizBody"></div>
+  </div>
+</div>
 
 <footer>
   <b>EmojiMap</b> — 광고 없이, 한 페이지에서 모든 이모지를. Unicode Emoji <span id="fVer"></span> 기준 · 데이터: <a href="https://unicode.org/emoji/charts/full-emoji-list.html" target="_blank" rel="noopener">Unicode</a> + <a href="https://cldr.unicode.org/" target="_blank" rel="noopener">CLDR</a> 주석 · 이모지를 클릭하면 바로 복사됩니다. 최신 이모지는 기기/OS가 지원해야 보입니다.
@@ -260,16 +344,20 @@ renderTonesState();
 /* ---------- build map ---------- */
 const mapEl = $('#map');
 const catnav = $('#catnav');
+let headers = [];
+/* nav is cheap — build immediately; heavy grids build progressively so first paint is instant */
 DATA.forEach((g, gi) => {
   const [ico, kname] = CAT[g.name] || ['🔸', g.name];
   const nb = document.createElement('button');
   nb.className = 'cat-btn'; nb.innerHTML = ico + ' ' + kname;
   nb.onclick = () => {
     if(document.body.classList.contains('mapmode') && window.mapFlyTo) mapFlyTo(g.name);
-    else document.getElementById('g'+gi).scrollIntoView();
+    else document.getElementById('g'+gi)?.scrollIntoView();
   };
   catnav.appendChild(nb);
-
+});
+function buildGroup(g, gi){
+  const [ico, kname] = CAT[g.name] || ['🔸', g.name];
   const sec = document.createElement('section');
   sec.className = 'group'; sec.dataset.gi = gi;
   const count = g.subs.reduce((a,s)=>a+s.emoji.length,0);
@@ -278,18 +366,31 @@ DATA.forEach((g, gi) => {
     const sd = document.createElement('div'); sd.className='sub';
     sd.innerHTML = `<h3>${sub.name.replace(/-/g,' ')}</h3>`;
     const grid = document.createElement('div'); grid.className='egrid';
+    const frag = document.createDocumentFragment();
     sub.emoji.forEach(e => {
       const b = document.createElement('button');
       b.className = 'e' + (e.s ? ' has-skin' : '');
       b.textContent = applyTone(e);
       b.title = (e.k ? e.k + ' · ' : '') + e.n;
       b.dataset.c = e.c;
-      grid.appendChild(b);
+      frag.appendChild(b);
     });
+    grid.appendChild(frag);
     sd.appendChild(grid); sec.appendChild(sd);
   });
   mapEl.appendChild(sec);
-});
+}
+const buildQueue = DATA.map((g, gi) => () => buildGroup(g, gi));
+(function pump(){
+  const job = buildQueue.shift();
+  if(!job){
+    headers = [...document.querySelectorAll('.group>h2')];
+    if(currentPred) applyFilter(currentPred);
+    return;
+  }
+  job();
+  (window.requestIdleCallback || requestAnimationFrame)(pump, {timeout: 80});
+})();
 $('#fVer').textContent = window.EMOJI_VERSION;
 
 function refreshAllGlyphs(){
@@ -425,6 +526,7 @@ let currentPred = null;
 function applyFilter(pred){
   currentPred = pred;
   if(window.mapDraw) mapDraw();
+  if(window.magInvalidate) magInvalidate();
   let any = false;
   mapEl.querySelectorAll('.egrid').forEach(grid => {
     let vis = 0;
@@ -443,7 +545,11 @@ function applyFilter(pred){
 }
 document.addEventListener('keydown', e => {
   if(e.key === '/' && document.activeElement !== qEl){ e.preventDefault(); qEl.focus(); }
-  if(e.key === 'Escape'){ $('#panel').classList.remove('open'); if(qEl.value){ qEl.value=''; clearFilter(); } }
+  if(e.key === 'Escape'){
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    $('#panel').classList.remove('open');
+    if(qEl.value){ qEl.value=''; clearFilter(); }
+  }
 });
 
 /* ---------- random ---------- */
@@ -496,27 +602,42 @@ document.querySelector('.logo').onclick = () => {
 
 /* ================= FUN: dock-style hover magnify ================= */
 if(matchMedia('(hover:hover)').matches && !REDUCED){
-  let magGrid = null, magRaf = 0;
+  let magGrid = null, magRaf = 0, rectCache = null;
+  // measure once per grid (unscaled centers), reuse across frames — avoids layout thrash
+  const gridRects = grid => {
+    if(rectCache && rectCache.grid === grid) return rectCache.items;
+    const items = [...grid.querySelectorAll('.e:not(.hidden)')].map(b => {
+      const prev = b.style.transform; b.style.transform = '';
+      const r = b.getBoundingClientRect();
+      b.style.transform = prev;
+      return { b, x: r.left + r.width/2, y: r.top + r.height/2 };
+    });
+    rectCache = { grid, items };
+    return items;
+  };
+  const invalidate = () => { rectCache = null; };
+  addEventListener('scroll', invalidate, {passive:true, capture:true});
+  addEventListener('resize', invalidate);
+  window.magInvalidate = invalidate;
   const resetMag = g => g && g.querySelectorAll('.e').forEach(b => { b.style.transform=''; b.style.zIndex=''; });
   mapEl.addEventListener('mousemove', ev => {
     const grid = ev.target.closest('.egrid');
-    if(magGrid && magGrid !== grid) resetMag(magGrid);
+    if(magGrid && magGrid !== grid){ resetMag(magGrid); invalidate(); }
     magGrid = grid;
     if(!grid || magRaf) return;
     magRaf = requestAnimationFrame(() => {
       magRaf = 0;
-      grid.querySelectorAll('.e:not(.hidden)').forEach(b => {
-        const r = b.getBoundingClientRect();
-        const d = Math.hypot(ev.clientX-(r.left+r.width/2), ev.clientY-(r.top+r.height/2));
+      gridRects(grid).forEach(({b, x, y}) => {
+        const d = Math.hypot(ev.clientX-x, ev.clientY-y);
         if(d < 100){
-          const s = 1 + (1-d/100)*.85;
-          b.style.transform = `scale(${s}) translateY(${-(1-d/100)*7}px)`;
-          b.style.zIndex = Math.round((1-d/100)*10)+1;
-        } else { b.style.transform=''; b.style.zIndex=''; }
+          const f = 1-d/100;
+          b.style.transform = `scale(${1+f*.85}) translateY(${-f*7}px)`;
+          b.style.zIndex = Math.round(f*10)+1;
+        } else if(b.style.transform){ b.style.transform=''; b.style.zIndex=''; }
       });
     });
   });
-  mapEl.addEventListener('mouseleave', () => { resetMag(magGrid); magGrid = null; });
+  mapEl.addEventListener('mouseleave', () => { resetMag(magGrid); magGrid = null; invalidate(); });
 }
 
 /* ================= CANVAS MAP VIEW ================= */
@@ -729,8 +850,222 @@ viewBtn.onclick = () => setMapMode(!mapActive);
 addEventListener('resize', () => { if(mapActive) resizeCanvas(); });
 if(store.get('mapmode', false)) setMapMode(true);
 
+/* ================= 인기 TOP & 오늘의 이모지 ================= */
+// Unicode 공식 빈도 랭킹(2021) + 2024 소셜 집계(😭 1위) 기반
+const POPULAR = ['😭','😂','🤣','❤️','🙏','😍','🥰','😘','👍','😊','🔥','🎉','✨','😁','💕','🥺','😅','☺️','🤦','🤷','🙄','😢','💀','😆'].filter(c => byChar.has(c));
+{
+  const wrap = document.querySelector('#rowTop .pemo');
+  POPULAR.forEach((c, i) => {
+    const e = byChar.get(c);
+    const rw = document.createElement('span'); rw.className = 'rankwrap';
+    const b = document.createElement('button');
+    b.textContent = c; b.title = `${i+1}위 · ${e.k || e.n}`;
+    b.onclick = () => { copyEmoji(applyTone(e), e); openPanel(e); };
+    rw.appendChild(b);
+    if(i < 3){ const r = document.createElement('span'); r.className='rank'; r.textContent = ['🥇','🥈','🥉'][i]; rw.appendChild(r); }
+    wrap.appendChild(rw);
+  });
+}
+{
+  const d = new Date();
+  const seed = (d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate());
+  const pool = ALL.filter(e => e.k && e.group !== 'Flags' && e.group !== 'Symbols');
+  const e = pool[(Math.imul(seed, 2654435761) >>> 8) % pool.length];
+  const wrap = document.querySelector('#rowDaily .pemo');
+  const b = document.createElement('button');
+  b.textContent = e.c; b.title = e.k || e.n;
+  b.onclick = () => { copyEmoji(applyTone(e), e); openPanel(e); };
+  const label = document.createElement('span');
+  label.className = 'empty'; label.textContent = `오늘의 이모지 — ${e.k || e.n}`;
+  wrap.append(b, label);
+}
+
+/* ================= 딥링크 & 공유 ================= */
+function emojiURL(e){ return location.origin + location.pathname + '#' + encodeURIComponent(e.c); }
+const _openPanel = openPanel;
+openPanel = function(e){
+  _openPanel(e);
+  history.replaceState(null, '', '#' + encodeURIComponent(e.c));
+};
+$('#pShare').onclick = () => {
+  if(!panelEmoji) return;
+  if(navigator.share){ navigator.share({ text: applyTone(panelEmoji), url: emojiURL(panelEmoji) }).catch(()=>{}); }
+  else copyText(emojiURL(panelEmoji)).then(() => toast('링크 복사됨!'));
+};
+function openFromHash(){
+  if(location.hash.length <= 1) return;
+  try {
+    const e = byChar.get(decodeURIComponent(location.hash.slice(1)));
+    if(e) setTimeout(() => openPanel(e), 100);
+  } catch {}
+}
+openFromHash();
+addEventListener('hashchange', openFromHash);
+
+/* ================= 🧪 이모지 믹서 (Emoji Kitchen) =================
+   kitchen-data.js: 379개 이모지 × 58,053개 실제 조합 인덱스(구글 Emoji Kitchen 메타데이터 추출).
+   조합 존재 여부·날짜·좌우 순서를 로컬에서 즉시 조회 — 404 프로빙 없음. 첫 사용 시 lazy load. */
+let mixA = null, mixB = null, mixSlotTurn = 0, mixCurrentURL = null;
+let kitchenReady = null, kitchenTri = null, kitchenIdx = null;
+const cpOf = ch => [...ch].map(c => c.codePointAt(0).toString(16)).join('-');
+function loadKitchen(){
+  if(kitchenReady) return kitchenReady;
+  kitchenReady = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'kitchen-data.js';
+    s.onload = () => {
+      const bin = atob(KITCHEN.tri);
+      kitchenTri = new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) kitchenTri[i] = bin.charCodeAt(i);
+      kitchenIdx = new Map(KITCHEN.cps.map((c,i) => [c,i]));
+      res();
+    };
+    s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  return kitchenReady;
+}
+function kitchenURL(chA, chB){
+  const a = kitchenIdx.get(cpOf(chA)), b = kitchenIdx.get(cpOf(chB));
+  if(a === undefined || b === undefined) return null;
+  const [i, j] = a <= b ? [a, b] : [b, a];
+  const v = kitchenTri[j*(j+1)/2 + i];
+  if(!v) return null;
+  const date = KITCHEN.dates[(v-1) >> 1], swap = (v-1) & 1;
+  const [lc, rc] = swap ? [KITCHEN.cps[j], KITCHEN.cps[i]] : [KITCHEN.cps[i], KITCHEN.cps[j]];
+  const u = c => 'u' + c.replace(/-/g, '-u');
+  return `https://www.gstatic.com/android/keyboard/emojikitchen/${date}/${u(lc)}/${u(lc)}_${u(rc)}.png`;
+}
+async function openMix(prefill){
+  $('#mixModal').classList.add('open');
+  try { await loadKitchen(); } catch { $('#mixResult').innerHTML = '<div class="mixmsg">데이터 로드 실패 — 새로고침 해주세요</div>'; return; }
+  if(!$('#mixQuick').childElementCount){
+    const q = $('#mixQuick');
+    KITCHEN.chars.forEach(ch => {
+      const b = document.createElement('button');
+      b.textContent = ch;
+      b.onclick = () => setMixEmoji(ch);
+      q.appendChild(b);
+    });
+  }
+  if(prefill){
+    if(kitchenIdx.has(cpOf(prefill))){ mixA = prefill; mixB = null; mixSlotTurn = 1; }
+    else { toast('이 이모지는 믹서에서 지원되지 않아요 😢'); mixA = mixB = null; mixSlotTurn = 0; }
+  }
+  renderMixSlots(); tryMix();
+}
+function renderMixSlots(){
+  const sa = $('#slotA'), sb = $('#slotB');
+  sa.textContent = mixA || '＋'; sb.textContent = mixB || '＋';
+  sa.classList.toggle('filled', !!mixA); sb.classList.toggle('filled', !!mixB);
+}
+function tryMix(){
+  const R = $('#mixResult'), acts = $('#mixActs');
+  mixCurrentURL = null; acts.classList.add('hidden');
+  if(!mixA || !mixB){ R.innerHTML = '<div class="mixmsg">이모지를 두 개 선택해 보세요 👇</div>'; return; }
+  const url = kitchenURL(mixA, mixB);
+  acts.classList.remove('hidden');
+  if(url){
+    mixCurrentURL = url;
+    R.innerHTML = `<img src="${url}" alt="${mixA}+${mixB}"><div class="mixmsg">${mixA} ✕ ${mixB}</div>`;
+    burst(mixA); burst(mixB);
+  } else {
+    R.innerHTML = `<div class="mixmsg">😢 이 조합은 없어요. 🎲 랜덤으로 돌려보세요!</div>`;
+  }
+}
+function setMixEmoji(ch){
+  if(mixSlotTurn === 0){ mixA = ch; mixSlotTurn = 1; }
+  else { mixB = ch; mixSlotTurn = 0; }
+  renderMixSlots(); tryMix();
+}
+$('#slotA').onclick = () => { mixSlotTurn = 0; toast('아래에서 이모지를 고르세요'); };
+$('#slotB').onclick = () => { mixSlotTurn = 1; toast('아래에서 이모지를 고르세요'); };
+$('#mixShuffle').onclick = () => {
+  // 반드시 존재하는 조합이 나올 때까지 시도 (인덱스 조회라 즉시)
+  for(let t=0;t<200;t++){
+    const a = KITCHEN.chars[Math.floor(Math.random()*KITCHEN.chars.length)];
+    const b = KITCHEN.chars[Math.floor(Math.random()*KITCHEN.chars.length)];
+    if(kitchenURL(a, b)){ mixA = a; mixB = b; break; }
+  }
+  renderMixSlots(); tryMix();
+};
+$('#mixDownload').onclick = async () => {
+  if(!mixCurrentURL){ toast('먼저 조합을 만들어 보세요!'); return; }
+  try {
+    const blob = await fetch(mixCurrentURL).then(r => r.blob());
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `emoji-mix-${cpOf(mixA)}-${cpOf(mixB)}.png`;
+    a.click(); URL.revokeObjectURL(a.href);
+  } catch { window.open(mixCurrentURL, '_blank'); }
+};
+$('#mixBtn').onclick = () => openMix();
+$('#pMix').onclick = () => { if(panelEmoji){ $('#panel').classList.remove('open'); openMix(panelEmoji.c); } };
+
+/* ================= 🎯 이모지 퀴즈 ================= */
+const QUIZ_POOL = ALL.filter(e => e.k && ['Smileys & Emotion','Animals & Nature','Food & Drink','Activities','Travel & Places','Objects'].includes(e.group));
+let quiz = null;
+function startQuiz(){
+  const qs = [];
+  const used = new Set();
+  while(qs.length < 10){
+    const e = QUIZ_POOL[Math.floor(Math.random()*QUIZ_POOL.length)];
+    if(used.has(e.c)) continue;
+    used.add(e.c); qs.push(e);
+  }
+  quiz = { i: 0, score: 0, qs };
+  renderQuiz();
+  $('#quizModal').classList.add('open');
+}
+function renderQuiz(){
+  const body = $('#quizBody');
+  if(quiz.i >= quiz.qs.length){
+    const best = Math.max(store.get('quizBest', 0), quiz.score);
+    store.set('quizBest', best);
+    const msg = quiz.score === 10 ? '🏆 만점! 이모지 마스터!' : quiz.score >= 7 ? '🎉 대단해요!' : quiz.score >= 4 ? '💪 좋아요, 한 번 더?' : '😅 다시 도전해 보세요!';
+    body.innerHTML = `<div class="quiz-end"><div class="score">${quiz.score}/10</div><p>${msg}<br>최고 기록: ${best}/10</p><button id="quizRetry">다시 하기</button></div>`;
+    $('#quizRetry').onclick = startQuiz;
+    if(quiz.score >= 7) for(let i=0;i<3;i++) setTimeout(() => burst(['🎉','✨','🏆'][i%3]), i*180);
+    return;
+  }
+  const answer = quiz.qs[quiz.i];
+  const opts = [answer];
+  while(opts.length < 4){
+    const e = QUIZ_POOL[Math.floor(Math.random()*QUIZ_POOL.length)];
+    if(!opts.some(o => o.c === e.c)) opts.push(e);
+  }
+  opts.sort(() => Math.random()-.5);
+  body.innerHTML = `
+    <div class="quiz-bar"><span>문제 ${quiz.i+1}/10</span><span>점수 ${quiz.score}</span></div>
+    <div class="quiz-q">“${answer.k}”</div>
+    <div class="quiz-hint">${answer.n}</div>
+    <div class="quiz-opts">${opts.map((o,i) => `<button data-i="${i}">${o.c}</button>`).join('')}</div>`;
+  body.querySelectorAll('.quiz-opts button').forEach((b, i) => {
+    b.onclick = () => {
+      body.querySelectorAll('.quiz-opts button').forEach(x => x.onclick = null);
+      if(opts[i] === answer){
+        b.classList.add('correct'); quiz.score++; burst(answer.c);
+      } else {
+        b.classList.add('wrong');
+        body.querySelectorAll('.quiz-opts button')[opts.indexOf(answer)].classList.add('correct');
+      }
+      quiz.i++;
+      setTimeout(renderQuiz, 800);
+    };
+  });
+}
+$('#quizBtn').onclick = startQuiz;
+
+/* modal close */
+document.querySelectorAll('.mclose').forEach(b => b.onclick = () => $('#'+b.dataset.close).classList.remove('open'));
+document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if(e.target === m) m.classList.remove('open'); }));
+
+/* ================= PWA: service worker ================= */
+if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
 /* ---------- active category on scroll ---------- */
-const headers = [...document.querySelectorAll('.group>h2')];
 addEventListener('scroll', () => {
   let idx = 0;
   headers.forEach((h,i) => { if(h.getBoundingClientRect().top < 140) idx = i; });

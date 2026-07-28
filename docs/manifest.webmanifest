@@ -1,0 +1,12 @@
+{
+  "name": "EmojiMap — 한눈에 보는 이모지 지도",
+  "short_name": "EmojiMap",
+  "description": "광고 없이 한 페이지에서 모든 이모지를 탐색·검색·복사",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#6366f1",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
