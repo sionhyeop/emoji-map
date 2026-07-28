@@ -75,7 +75,7 @@ main{max-width:1200px;margin:0 auto;padding:16px}
 .group>h2 .gcount{font-size:12px;color:var(--sub);font-weight:600;background:var(--chip);border-radius:999px;padding:2px 9px}
 .sub h3{font-size:12.5px;font-weight:700;color:var(--sub);padding:10px 2px 6px;text-transform:capitalize}
 .egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:2px}
-.e{font-size:26px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:10px;position:relative;transition:transform .12s cubic-bezier(.34,1.56,.64,1);font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;will-change:transform}
+.e{font-size:26px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:10px;position:relative;transition:transform .12s cubic-bezier(.34,1.56,.64,1);font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 .e:hover{background:var(--accent-soft)}
 .e.has-skin::after{content:"";position:absolute;right:5px;bottom:5px;width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.65}
 .hidden{display:none!important}
@@ -335,9 +335,17 @@ const ALL = [];            // every base emoji entry
 const byChar = new Map();
 DATA.forEach(g => g.subs.forEach(sub => sub.emoji.forEach(e => {
   e.group = g.name; e.sub = sub.name;
-  e.search = (e.n + ' ' + e.k + ' ' + e.kw + ' ' + sub.name.replace(/-/g,' ')).toLowerCase();
+  e.search = (e.n + ' ' + e.k + ' ' + sub.name.replace(/-/g,' ')).toLowerCase();
   ALL.push(e); byChar.set(e.c, e);
 })));
+/* 검색 키워드(58KB)는 첫 화면 이후 유휴 시간에 로드 — 도착하면 검색 인덱스 확장 */
+addEventListener('emoji-kw-ready', () => {
+  ALL.forEach(e => { const kw = EMOJI_KW[e.c]; if(kw) e.search += ' ' + kw.toLowerCase(); });
+  if(currentPred && qEl.value) qEl.dispatchEvent(new Event('input'));
+}, { once: true });
+addEventListener('load', () => (window.requestIdleCallback || setTimeout)(() => {
+  const s = document.createElement('script'); s.src = 'emoji-kw.js'; document.head.appendChild(s);
+}));
 
 /* ---------- skin tone ---------- */
 const TONES = ['✋','✋🏻','✋🏼','✋🏽','✋🏾','✋🏿'];
@@ -347,7 +355,7 @@ const skinsEl = $('#skins');
 TONES.forEach((t,i)=>{
   const b = document.createElement('button');
   b.textContent = t; b.title = i===0?'기본':'스킨톤 '+i;
-  b.onclick = ()=>{ tone=i; store.set('tone',i); renderTonesState(); refreshAllGlyphs(); if(window.mapDraw) mapDraw(); };
+  b.onclick = ()=>{ tone=i; store.set('tone',i); renderTonesState(); refreshAllGlyphs(); if(window.buildWorldBitmap) buildWorldBitmap(); if(window.mapDraw) mapDraw(); };
   skinsEl.appendChild(b);
 });
 function renderTonesState(){ [...skinsEl.children].forEach((b,i)=>b.classList.toggle('on', i===tone)) }
@@ -398,6 +406,8 @@ const buildQueue = DATA.map((g, gi) => () => buildGroup(g, gi));
   if(!job){
     headers = [...document.querySelectorAll('.group>h2')];
     if(currentPred) applyFilter(currentPred);
+    // 그리드 완성 후 유휴 시간에 지도 비트맵 프리렌더 (글리프 래스터 캐시도 함께 워밍)
+    setTimeout(() => window.buildWorldBitmap && buildWorldBitmap(), 600);
     return;
   }
   job();
@@ -751,6 +761,32 @@ const tip = $('#maptip');
 let view = { x: 0, y: 0, k: 0.3 }, mapActive = false;
 const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
 
+/* 월드 비트맵: 1,914개 글리프의 최초 래스터화(수백 ms~수초)를 유휴 시간에
+   조각조각 선지불해 두고, 팬/줌은 drawImage 한 번(<1ms)으로 처리 */
+let worldBmp = null, worldReady = false, worldToken = 0;
+window.buildWorldBitmap = function(){
+  const tok = ++worldToken;
+  worldReady = false;
+  if(!worldBmp){ worldBmp = document.createElement('canvas'); worldBmp.width = WORLD_W; worldBmp.height = WORLD_H; }
+  const wctx = worldBmp.getContext('2d');
+  wctx.clearRect(0, 0, WORLD_W, WORLD_H);
+  wctx.textAlign = 'center'; wctx.textBaseline = 'middle';
+  let i = 0;
+  (function step(){
+    if(tok !== worldToken) return;
+    let lastFont = 0;
+    const end = Math.min(i + 60, cells.length);
+    for(; i < end; i++){
+      const c = cells[i];
+      const fs = Math.round(c.s*.72);
+      if(fs !== lastFont){ wctx.font = `${fs}px ${EMOJI_FONT}`; lastFont = fs; }
+      wctx.fillText(applyTone(c.e), c.x, c.y + c.s*.03);
+    }
+    if(i < cells.length) (window.requestIdleCallback || requestAnimationFrame)(step, {timeout: 1000});
+    else { worldReady = true; document.body.dataset.world = 'ready'; if(mapActive) mapDraw(); }
+  })();
+};
+
 function fitView(){
   const r = cv.getBoundingClientRect();
   view.k = Math.min(r.width/WORLD_W, r.height/WORLD_H) * .97;
@@ -792,20 +828,36 @@ window.mapDraw = function(){
   // emoji cells (skip when too small to see)
   const px = view.k * cells[0].s;
   if(px > 7){
-    mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
-    let lastFont = 0;
-    cells.forEach(c => {
-      if(c.x < vx0-c.s || c.x > vx1+c.s || c.y < vy0-c.s || c.y > vy1+c.s) return;
-      const dim = currentPred && !currentPred(c.e);
-      mctx.globalAlpha = dim ? .12 : 1;
-      const fs = Math.round(c.s*.72);
-      if(fs !== lastFont){ mctx.font = `${fs}px ${EMOJI_FONT}`; lastFont = fs; }
-      mctx.fillText(applyTone(c.e), c.x, c.y + c.s*.03);
-    });
-    mctx.globalAlpha = 1;
+    if(worldReady && view.k <= 1.6){
+      // 사전 렌더된 비트맵 blit — 프레임당 <1ms
+      if(currentPred){
+        mctx.globalAlpha = .1;
+        mctx.drawImage(worldBmp, 0, 0);
+        mctx.globalAlpha = 1;
+        drawLiveCells(vx0, vy0, vx1, vy1, true);
+      } else {
+        mctx.drawImage(worldBmp, 0, 0);
+      }
+    } else {
+      drawLiveCells(vx0, vy0, vx1, vy1, false);
+    }
   }
   mctx.restore();
 };
+function drawLiveCells(vx0, vy0, vx1, vy1, matchedOnly){
+  mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+  let lastFont = 0;
+  cells.forEach(c => {
+    if(c.x < vx0-c.s || c.x > vx1+c.s || c.y < vy0-c.s || c.y > vy1+c.s) return;
+    const match = !currentPred || currentPred(c.e);
+    if(matchedOnly && !match) return;
+    mctx.globalAlpha = match ? 1 : .12;
+    const fs = Math.round(c.s*.72);
+    if(fs !== lastFont){ mctx.font = `${fs}px ${EMOJI_FONT}`; lastFont = fs; }
+    mctx.fillText(applyTone(c.e), c.x, c.y + c.s*.03);
+  });
+  mctx.globalAlpha = 1;
+}
 function roundRect(x,y,w,h,r){
   mctx.beginPath();
   mctx.moveTo(x+r,y); mctx.arcTo(x+w,y,x+w,y+h,r); mctx.arcTo(x+w,y+h,x,y+h,r);
@@ -929,7 +981,10 @@ function setMapMode(on){
   document.body.classList.toggle('mapmode', on);
   viewBtn.textContent = on ? '📋 목록뷰' : '🗺️ 지도뷰';
   store.set('mapmode', on);
-  if(on){ requestAnimationFrame(() => { resizeCanvas(); fitView(); mapDraw(); }); }
+  if(on){
+    if(worldToken === 0) buildWorldBitmap();
+    requestAnimationFrame(() => { resizeCanvas(); fitView(); mapDraw(); });
+  }
 }
 viewBtn.onclick = () => setMapMode(!mapActive);
 addEventListener('resize', () => { if(mapActive) resizeCanvas(); });

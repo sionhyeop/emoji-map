@@ -74,7 +74,19 @@ skins = sum(len(e.get('s', [])) for g in groups for s in g['subs'] for e in s['e
 print(f'version {version}, base emoji: {total}, skin variants: {skins}')
 
 os.makedirs(os.path.join(SRC, 'docs'), exist_ok=True)
+# split: core (render-critical) vs keywords (search-only, lazy loaded)
+kw_map = {}
+for g in groups:
+    for s in g['subs']:
+        for e in s['emoji']:
+            if e['kw']:
+                kw_map[e['c']] = e['kw']
+            del e['kw']
 with open(os.path.join(SRC, 'docs', 'emoji-data.js'), 'w', encoding='utf-8') as f:
     f.write('window.EMOJI_VERSION=' + json.dumps(version) + ';\n')
     f.write('window.EMOJI_DATA=' + json.dumps(groups, ensure_ascii=False, separators=(',', ':')) + ';\n')
-print('wrote docs/emoji-data.js', os.path.getsize(os.path.join(SRC, 'docs', 'emoji-data.js')), 'bytes')
+with open(os.path.join(SRC, 'docs', 'emoji-kw.js'), 'w', encoding='utf-8') as f:
+    f.write('window.EMOJI_KW=' + json.dumps(kw_map, ensure_ascii=False, separators=(',', ':')) + ';'
+            + 'window.dispatchEvent(new Event("emoji-kw-ready"));\n')
+for fn in ('emoji-data.js', 'emoji-kw.js'):
+    print('wrote docs/' + fn, os.path.getsize(os.path.join(SRC, 'docs', fn)), 'bytes')
